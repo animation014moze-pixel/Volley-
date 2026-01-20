@@ -88,6 +88,23 @@ canvas { width:100vw; height:100vh; display:block; }
 
 <!-- ====================== JS ====================== -->
 <script>
+    // 🔥 FIREBASE (MULTIPLAYER)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDPjk9CQzIfipYaPVPfSr8KGZvxBWRReb0",
+  authDomain: "phrasal-waters-484818-b1.firebaseapp.com",
+  projectId: "phrasal-waters-484818-b1",
+  storageBucket: "phrasal-waters-484818-b1.firebasestorage.app",
+  messagingSenderId: "275985211621",
+  appId: "1:275985211621:web:107b06cdf8b5afbe68340c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+console.log("🔥 Firebase conectado");
 // -------------------- CANVAS --------------------
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
