@@ -253,7 +253,31 @@ function setScreen(id) { document.querySelectorAll('.screen').forEach(s => s.cla
 
 updateUI();
 loop();
-</script>
+</script> 
+
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDPjk9CQzIfipYaPVPfSr8KGZvxBWRReb0",
+    authDomain: "phrasal-waters-484818-b1.firebaseapp.com",
+    projectId: "phrasal-waters-484818-b1",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function teste() {
+    await setDoc(doc(db, "teste", "jogoOnline"), {
+      status: "ok",
+      hora: Date.now()
+    });
+    console.log("🔥 FIRESTORE OK");
+  }
+
+  teste();
+    </script>
 </body>
   </html>
                                                 
