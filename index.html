@@ -147,19 +147,32 @@ function startMode(m) {
 }
 
 function loop() {
-ctx.setTransform(
-  canvas.width / 800, 0,
-  0, canvas.height / 400,
-  0, 0
-);{
-    if(game.active) 
+
+    // ESCALA PROPORCIONAL DO CANVAS
+    ctx.setTransform(
+      canvas.width / 800, 0,
+      0, canvas.height / 400,
+      0, 0
+    );
+
+    if(game.active) {
         // P1
-        let speed = 5; if(p1.dash > 0) { speed = 12; p1.dash--; }
-        if(inputs.left) p1.x -= speed; if(inputs.right) p1.x += speed;
-        p1.vy += 0.22; p1.y += p1.vy;
+        let speed = 5;
+        if(p1.dash > 0) { speed = 12; p1.dash--; }
+        if(inputs.left) p1.x -= speed;
+        if(inputs.right) p1.x += speed;
+
+        p1.vy += 0.22;
+        p1.y += p1.vy;
+
         if(p1.y >= 360) { p1.y = 360; p1.vy = 0; }
         p1.x = Math.max(0, Math.min(355, p1.x));
 
+        // resto do loop...
+    }
+
+    requestAnimationFrame(loop);
+    }
         // BOLA
         ball.vy += 0.18; ball.x += ball.vx; ball.y += ball.vy;
         if(ball.x < 0 || ball.x > 800) ball.vx *= -1;
