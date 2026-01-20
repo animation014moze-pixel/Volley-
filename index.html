@@ -208,8 +208,7 @@ function loop() {
 
         document.getElementById('energy-fill').style.width = game.energy + "%";
     }
-requestAnimationFrame(loop);
-    }
+
     // DRAW
     let arena = ITEMS.find(i => i.id === game.eq.arena);
     ctx.fillStyle = arena.color; ctx.fillRect(0,0,800,400);
