@@ -86,7 +86,12 @@
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 800; canvas.height = 400;
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
 const ITEMS = [
     {id:'arena_verde', name:'Deserto Verde', type:'arena', rarity:'common', icon:'🌵', color: '#2ecc71'},
@@ -142,7 +147,12 @@ function startMode(m) {
 }
 
 function loop() {
-    if(game.active) {
+ctx.setTransform(
+  canvas.width / 800, 0,
+  0, canvas.height / 400,
+  0, 0
+);{
+    if(game.active) 
         // P1
         let speed = 5; if(p1.dash > 0) { speed = 12; p1.dash--; }
         if(inputs.left) p1.x -= speed; if(inputs.right) p1.x += speed;
