@@ -171,8 +171,7 @@ function loop() {
         // resto do loop...
     }
 
-    requestAnimationFrame(loop);
-    }
+
         // BOLA
         ball.vy += 0.18; ball.x += ball.vx; ball.y += ball.vy;
         if(ball.x < 0 || ball.x > 800) ball.vx *= -1;
@@ -209,7 +208,8 @@ function loop() {
 
         document.getElementById('energy-fill').style.width = game.energy + "%";
     }
-
+requestAnimationFrame(loop);
+    }
     // DRAW
     let arena = ITEMS.find(i => i.id === game.eq.arena);
     ctx.fillStyle = arena.color; ctx.fillRect(0,0,800,400);
