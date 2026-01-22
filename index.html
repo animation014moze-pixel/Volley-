@@ -111,6 +111,15 @@ const ITEMS = [
 { id:'skin_noya', name:'Nishinoya', type:'skin', rarity:'epic', icon:'⚡', color:'#f1c40f'},
 { id:'skin_setter', name:'Setter', type:'skin', rarity:'epic', icon:'🧠', color:'#2e86de'},
 ];
+
+// ================= GAME =================
+let game = {
+money: parseInt(localStorage.getItem('v17_money')) || 500,
+inv: JSON.parse(localStorage.getItem('v17_inv')) || ['arena_verde','ball_normal','skin_default','style_none'],
+eq: { arena:'arena_verde', ball:'ball_normal', skill:'style_none', skin:'skin_default' },
+active:false, mode:'friendly', energy:0, currentTab:'arena',
+scoreP1:0, scoreBot:0, lastWinner:'p1'
+};
     <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -128,54 +137,24 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ID único do jogador
 let playerId = localStorage.getItem("player_id");
 if (!playerId) {
   playerId = "player_" + Math.random().toString(36).substr(2, 9);
   localStorage.setItem("player_id", playerId);
 }
 
-// salvar na nuvem
 async function saveCloud(data) {
   await setDoc(doc(db, "players", playerId), data, { merge: true });
-  console.log("☁️ Salvo no Firebase!");
 }
 
-// carregar da nuvem
 async function loadCloud() {
-  const ref = doc(db, "players", playerId);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    console.log("☁️ Dados carregados!");
-    return snap.data();
-  }
-  return null;
+  const snap = await getDoc(doc(db, "players", playerId));
+  return snap.exists() ? snap.data() : null;
 }
 
-// deixar global
 window.saveCloud = saveCloud;
 window.loadCloud = loadCloud;
-
-// 🔥 carregar dados ao iniciar o jogo
-(async () => {
-  const cloudData = await loadCloud();
-  if (cloudData && window.game) {
-    game.money = cloudData.money ?? game.money;
-    game.inv = cloudData.inv ?? game.inv;
-    game.eq = cloudData.eq ?? game.eq;
-    game.scoreP1 = cloudData.score ?? game.scoreP1;
-  }
-})();
 </script>
-
-// ================= GAME =================
-let game = {
-money: parseInt(localStorage.getItem('v17_money')) || 500,
-inv: JSON.parse(localStorage.getItem('v17_inv')) || ['arena_verde','ball_normal','skin_default','style_none'],
-eq: { arena:'arena_verde', ball:'ball_normal', skill:'style_none', skin:'skin_default' },
-active:false, mode:'friendly', energy:0, currentTab:'arena',
-scoreP1:0, scoreBot:0, lastWinner:'p1'
-};
 
 let ball = { x:100, y:-50, vx:0, vy:0 };
 let p1 = { x:100, y:360, vy:0, dash:0 };
@@ -390,14 +369,13 @@ if(game.eq.skill==='style_asahi') ball.vy=-16;
 if(game.eq.skill==='style_setter'){ ball.vy=-12; ball.vx*=0.2; }
 }
 };
-
+    
 function save() {
-  localStorage.setItem('v167_money', game.money);
-  localStorage.setItem('v167_inv', JSON.stringify(game.inv));
-  localStorage.setItem('v167_eq', JSON.stringify(game.eq));
+  localStorage.setItem('v17_money', game.money);
+  localStorage.setItem('v17_inv', JSON.stringify(game.inv));
+  localStorage.setItem('v17_eq', JSON.stringify(game.eq));
 
-  // 🔥 salva no Firebase também
-  if(window.saveCloud){
+  if (window.saveCloud) {
     saveCloud({
       money: game.money,
       inv: game.inv,
@@ -405,13 +383,20 @@ function save() {
       score: game.scoreP1
     });
   }
+}
+(async () => {
+  if(window.loadCloud){
+    const data = await loadCloud();
+    if(data){
+      game.money = data.money ?? game.money;
+      game.inv = data.inv ?? game.inv;
+      game.eq = data.eq ?? game.eq;
+      game.scoreP1 = data.score ?? game.scoreP1;
+      console.log("🔥 Save carregado do Firebase");
     }
-
-syncCloud();
-    setTimeout(() => {
-  save();
-  alert("Salvo no Firebase 😈");
-}, 3000);
+  }
+})();
+    
 </script>
 </body>
                                                                                       </html>
