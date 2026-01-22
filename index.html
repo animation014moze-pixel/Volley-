@@ -2,222 +2,239 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vôlei Pro V1.7</title>
+
 <style>
 :root { 
-    --accent: #f1c40f; --ultra: #00fbff; --bg: #1a1a1a;
+  --accent:#f1c40f; --ultra:#00fbff; --bg:#1a1a1a;
 }
-body { margin: 0; background: #000; font-family: 'Segoe UI', sans-serif; color: white; overflow: hidden; touch-action: none; height: 100vh; }
+body{margin:0;background:#000;font-family:Arial;color:white;overflow:hidden;}
 
-.screen { display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 10; }
-.active { display: flex; }
+canvas{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none; /* 🔥 deixa botões clicáveis */
+}
 
-.btn-main { background: var(--accent); color: black; border: none; padding: 10px; margin: 4px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
+.screen{
+  position:absolute;
+  inset:0;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,0.8);
+  z-index:5;
+}
+.active{display:flex;}
 
-canvas { width: 100vw; height: 100vh; display: block; position: absolute; inset: 0; z-index: 1; }
+.btn-main{
+  background:var(--accent);
+  border:none;
+  padding:10px;
+  margin:6px;
+  border-radius:8px;
+  font-weight:bold;
+  width:100%;
+  cursor:pointer;
+}
 
-#hud { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 5; }
-.controls { position: absolute; bottom: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; pointer-events: auto; }
-.btn-act { width: 70px; height: 70px; background: rgba(0,0,0,0.6); border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+#hud{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+  display:none;
+}
+
+.controls{
+  position:absolute;
+  bottom:20px;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  padding:0 30px;
+  pointer-events:auto;
+}
+
+.btn-act{
+  width:70px;
+  height:70px;
+  background:rgba(0,0,0,0.6);
+  border:2px solid white;
+  border-radius:50%;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  cursor:pointer;
+  user-select:none;
+}
 </style>
 </head>
 <body>
 
 <!-- LOBBY -->
 <div id="screen-lobby" class="screen active">
-<div style="text-align:center;background:#2c3e50;padding:25px;border-radius:20px;border:3px solid var(--accent);width:320px;">
-<h1 style="color:var(--accent)">VÔLEI 1.7</h1>
-<button class="btn-main" onclick="startMode('friendly')">JOGAR NORMAL</button>
-<button class="btn-main" style="background:#e67e22" onclick="startMode('tournament')">MODO TORNEIO</button>
-<button class="btn-main" style="background:#fff" onclick="openCatalog()">MEU CATÁLOGO</button>
-<button class="btn-main" style="background:var(--ultra)" onclick="pullGacha()">ABRIR BAÚ ($150)</button>
-<p>Moedas: <span id="money-display">0</span></p>
-</div>
-</div>
-
-<!-- CATÁLOGO -->
-<div id="screen-catalog" class="screen">
-<div style="background:#2c3e50;width:90%;height:80%;border-radius:15px;padding:10px;">
-<div>
-<button onclick="switchTab('arena')">ARENAS</button>
-<button onclick="switchTab('ball')">BOLAS</button>
-<button onclick="switchTab('skill')">ESTILOS</button>
-<button onclick="switchTab('skin')">SKINS</button>
-</div>
-<div id="catalog-grid"></div>
-<button class="btn-main" onclick="setScreen('screen-lobby')">VOLTAR</button>
-</div>
+  <div style="background:#2c3e50;padding:20px;border-radius:15px;width:300px;text-align:center;">
+    <h2>VÔLEI 1.7</h2>
+    <button class="btn-main" onclick="startMode()">JOGAR</button>
+    <button class="btn-main" onclick="openCatalog()">CATÁLOGO</button>
+    <button class="btn-main" onclick="pullGacha()">GACHA</button>
+    <p>Moedas: <span id="money-display">500</span></p>
+  </div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
+<!-- HUD -->
 <div id="hud">
-<div class="controls">
-<div>
-<div class="btn-act" id="m-left">←</div>
-<div class="btn-act" id="m-right">→</div>
+  <div class="controls">
+    <div>
+      <div class="btn-act" id="m-left">←</div>
+      <div class="btn-act" id="m-right">→</div>
+    </div>
+    <div>
+      <div class="btn-act" id="m-jump">PULO</div>
+      <div class="btn-act" id="p-use">PODER</div>
+    </div>
+  </div>
 </div>
-<div>
-<div class="btn-act" id="m-jump">PULO</div>
-</div>
-</div>
-</div>
 
-<!-- 🔥 FIREBASE (MODULE) -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDPjk9CQzIfipYaPVPfSr8KGZvxBWRReb0",
-  authDomain: "phrasal-waters-484818-b1.firebaseapp.com",
-  projectId: "phrasal-waters-484818-b1",
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let playerId = localStorage.getItem("player_id") || "player_" + Math.random().toString(36).slice(2);
-localStorage.setItem("player_id", playerId);
-
-window.saveCloud = async (data) => {
-  await setDoc(doc(db, "players", playerId), data, { merge: true });
-};
-
-window.loadCloud = async () => {
-  const snap = await getDoc(doc(db, "players", playerId));
-  return snap.exists() ? snap.data() : null;
-};
-</script>
-
-<!-- 🎮 JOGO NORMAL (SEM MODULE) -->
 <script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = 800;
-canvas.height = 400;
+const canvas=document.getElementById("gameCanvas");
+const ctx=canvas.getContext("2d");
+canvas.width=800;
+canvas.height=400;
 
-const ITEMS = [
- {id:'arena_verde', type:'arena', name:'Verde'},
- {id:'ball_normal', type:'ball', name:'Normal'},
- {id:'style_none', type:'skill', name:'Normal'},
- {id:'skin_default', type:'skin', name:'Normal'},
-];
-
-let game = {
- money: parseInt(localStorage.getItem("v17_money")) || 500,
- inv: JSON.parse(localStorage.getItem("v17_inv")) || ['arena_verde','ball_normal','skin_default','style_none'],
- eq: JSON.parse(localStorage.getItem("v17_eq")) || {arena:'arena_verde',ball:'ball_normal',skill:'style_none',skin:'skin_default'},
- currentTab:'arena',
- active:false
+// ===== GAME =====
+let game={
+  money:500,
+  eq:{skill:"style_none"},
+  active:false,
+  energy:0
 };
 
-function setScreen(id){
- document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
- if(id!=="none") document.getElementById(id).classList.add("active");
-}
-
-function updateUI(){
- document.getElementById("money-display").innerText = game.money;
-}
-updateUI();
-
-function save(){
- localStorage.setItem("v17_money", game.money);
- localStorage.setItem("v17_inv", JSON.stringify(game.inv));
- localStorage.setItem("v17_eq", JSON.stringify(game.eq));
- if(window.saveCloud){
-   saveCloud(game);
- }
-}
-
-async function load(){
- if(window.loadCloud){
-   const data = await loadCloud();
-   if(data){
-     game = {...game, ...data};
-     updateUI();
-   }
- }
-}
-load();
-
-// ===== LOBBY =====
-function startMode(){
- setScreen("none");
- document.getElementById("hud").style.display="block";
- game.active=true;
- loop();
-}
-
-// ===== CATÁLOGO =====
-function openCatalog(){
- setScreen("screen-catalog");
- renderCatalog();
-}
-
-function switchTab(tab){
- game.currentTab = tab;
- renderCatalog();
-}
-
-function renderCatalog(){
- const grid = document.getElementById("catalog-grid");
- grid.innerHTML="";
- ITEMS.filter(i=>i.type===game.currentTab).forEach(item=>{
-   const btn = document.createElement("button");
-   btn.innerText = item.name;
-   btn.onclick = ()=>equip(item.type,item.id);
-   grid.appendChild(btn);
- });
-}
-
-function equip(type,id){
- game.eq[type]=id;
- save();
- renderCatalog();
-}
-
-// ===== GACHA COM ANIMAÇÃO 🔥 =====
-function pullGacha(){
- if(game.money<150) return alert("Sem moedas!");
- game.money-=150;
- updateUI();
-
- const overlay = document.createElement("div");
- overlay.style = "position:fixed;inset:0;background:black;display:flex;align-items:center;justify-content:center;font-size:40px;z-index:999;";
- overlay.innerText="🎰 GIRANDO...";
- document.body.appendChild(overlay);
-
- setTimeout(()=>{
-   const item = ITEMS[Math.floor(Math.random()*ITEMS.length)];
-   if(!game.inv.includes(item.id)) game.inv.push(item.id);
-   overlay.innerText="✨ "+item.name+" ✨";
-   save();
-   setTimeout(()=>overlay.remove(),1200);
- },1200);
-}
-
-// ===== CONTROLES =====
+let ball={x:400,y:200,vx:0,vy:0};
+let p1={x:100,y:360,vy:0};
 let inputs={left:false,right:false};
-document.getElementById("m-left").ontouchstart = ()=>inputs.left=true;
-document.getElementById("m-left").ontouchend = ()=>inputs.left=false;
-document.getElementById("m-right").ontouchstart = ()=>inputs.right=true;
-document.getElementById("m-right").ontouchend = ()=>inputs.right=false;
+
+// ===== UI =====
+function setScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  if(id!=="none") document.getElementById(id).classList.add("active");
+}
+
+function startMode(){
+  setScreen("none");
+  document.getElementById("hud").style.display="block";
+  game.active=true;
+  spawnBall();
+}
+
+function spawnBall(){
+  ball.x=400;
+  ball.y=120;
+  ball.vx=0;
+  ball.vy=0;
+}
+
+// ===== CONTROLES MOBILE =====
+function bind(id,key){
+  const el=document.getElementById(id);
+  el.addEventListener("touchstart",e=>{e.preventDefault();inputs[key]=true;});
+  el.addEventListener("touchend",()=>inputs[key]=false);
+  el.addEventListener("mousedown",()=>inputs[key]=true);
+  el.addEventListener("mouseup",()=>inputs[key]=false);
+}
+bind("m-left","left");
+bind("m-right","right");
+
+document.getElementById("m-jump").onclick=()=>{
+  if(p1.y>=360) p1.vy=-10;
+};
+
+document.getElementById("p-use").onclick=()=>{
+  if(game.energy>=100){
+    game.energy=0;
+
+    if(game.eq.skill==="style_asahi"){
+      ball.vy=-18;
+    }
+
+    if(game.eq.skill==="style_setter"){
+      ball.vy=-14;
+      ball.vx*=0.2;
+    }
+  }
+};
 
 // ===== LOOP =====
-let x=100;
 function loop(){
- if(game.active){
-   if(inputs.left) x-=3;
-   if(inputs.right) x+=3;
- }
- ctx.clearRect(0,0,800,400);
- ctx.fillStyle="red";
- ctx.fillRect(x,300,40,40);
- requestAnimationFrame(loop);
+  if(game.active){
+
+    // player
+    if(inputs.left) p1.x-=5;
+    if(inputs.right) p1.x+=5;
+    p1.vy+=0.35;
+    p1.y+=p1.vy;
+    if(p1.y>=360){p1.y=360;p1.vy=0;}
+
+    // bola
+    ball.vy+=0.25;
+    ball.x+=ball.vx;
+    ball.y+=ball.vy;
+
+    // colisão com player
+    if(ball.x>p1.x && ball.x<p1.x+40 && ball.y>p1.y-50){
+      let power=-8;
+      let speed=0.4;
+
+      if(game.eq.skill==="style_asahi"){ power=-14; speed=1.1; }
+      if(game.eq.skill==="style_noya"){ power=-10; speed=0.6; }
+      if(game.eq.skill==="style_setter"){ power=-11; ball.vx*=0.3; }
+
+      ball.vy=power;
+      ball.vx=(ball.x-(p1.x+20))*speed;
+      game.energy=Math.min(100,game.energy+20);
+    }
+
+    // reset se cair
+    if(ball.y>400) spawnBall();
+  }
+
+  // draw
+  ctx.fillStyle="#1a1a1a";
+  ctx.fillRect(0,0,800,400);
+
+  ctx.fillStyle="white";
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,10,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="red";
+  ctx.fillRect(p1.x,p1.y-50,40,50);
+
+  // barra de energia
+  ctx.fillStyle="cyan";
+  ctx.fillRect(20,20,game.energy*2,10);
+
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ===== CATÁLOGO / GACHA =====
+function openCatalog(){
+  alert("Depois eu encaixo seu catálogo original 😈");
+}
+
+function pullGacha(){
+  const styles=["style_none","style_asahi","style_noya","style_setter"];
+  game.eq.skill=styles[Math.floor(Math.random()*styles.length)];
+  alert("Estilo equipado: "+game.eq.skill);
 }
 </script>
 </body>
-    </html>
+</html>
