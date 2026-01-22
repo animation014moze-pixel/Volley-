@@ -65,6 +65,7 @@ canvas { width: 100vw; height: 100vh; display: block; position: absolute; inset:
 </div>
 
 <!-- 🔥 FIREBASE (MODULE) -->
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -73,24 +74,33 @@ const firebaseConfig = {
   apiKey: "AIzaSyDPjk9CQzIfipYaPVPfSr8KGZvxBWRReb0",
   authDomain: "phrasal-waters-484818-b1.firebaseapp.com",
   projectId: "phrasal-waters-484818-b1",
+  storageBucket: "phrasal-waters-484818-b1.firebasestorage.app",
+  messagingSenderId: "275985211621",
+  appId: "1:275985211621:web:107b06cdf8b5afbe68340c",
+  measurementId: "G-L6SDP2VT3R"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let playerId = localStorage.getItem("player_id") || "player_" + Math.random().toString(36).slice(2);
-localStorage.setItem("player_id", playerId);
+let playerId = localStorage.getItem("player_id");
+if (!playerId) {
+  playerId = "player_" + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem("player_id", playerId);
+}
 
-window.saveCloud = async (data) => {
+async function saveCloud(data) {
   await setDoc(doc(db, "players", playerId), data, { merge: true });
-};
+}
 
-window.loadCloud = async () => {
+async function loadCloud() {
   const snap = await getDoc(doc(db, "players", playerId));
   return snap.exists() ? snap.data() : null;
-};
-</script>
+}
 
+window.saveCloud = saveCloud;
+window.loadCloud = loadCloud;
+</script>
 <!-- 🎮 JOGO NORMAL (SEM MODULE) -->
 <script>
 const canvas = document.getElementById("gameCanvas");
