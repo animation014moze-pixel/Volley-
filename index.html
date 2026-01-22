@@ -80,6 +80,8 @@ canvas { width: 100vw; height: 100vh; display: block; }
 </div>
 </div>
 </div>
+    
+<script type="module">
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -109,6 +111,62 @@ const ITEMS = [
 { id:'skin_noya', name:'Nishinoya', type:'skin', rarity:'epic', icon:'⚡', color:'#f1c40f'},
 { id:'skin_setter', name:'Setter', type:'skin', rarity:'epic', icon:'🧠', color:'#2e86de'},
 ];
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDPjk9CQzIfipYaPVPfSr8KGZvxBWRReb0",
+  authDomain: "phrasal-waters-484818-b1.firebaseapp.com",
+  projectId: "phrasal-waters-484818-b1",
+  storageBucket: "phrasal-waters-484818-b1.firebasestorage.app",
+  messagingSenderId: "275985211621",
+  appId: "1:275985211621:web:107b06cdf8b5afbe68340c",
+  measurementId: "G-L6SDP2VT3R"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ID único do jogador
+let playerId = localStorage.getItem("player_id");
+if (!playerId) {
+  playerId = "player_" + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem("player_id", playerId);
+}
+
+// salvar na nuvem
+async function saveCloud(data) {
+  await setDoc(doc(db, "players", playerId), data, { merge: true });
+  console.log("☁️ Salvo no Firebase!");
+}
+
+// carregar da nuvem
+async function loadCloud() {
+  const ref = doc(db, "players", playerId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    console.log("☁️ Dados carregados!");
+    return snap.data();
+  }
+  return null;
+}
+
+// deixar global
+window.saveCloud = saveCloud;
+window.loadCloud = loadCloud;
+
+// 🔥 carregar dados ao iniciar o jogo
+(async () => {
+  const cloudData = await loadCloud();
+  if (cloudData && window.game) {
+    game.money = cloudData.money ?? game.money;
+    game.inv = cloudData.inv ?? game.inv;
+    game.eq = cloudData.eq ?? game.eq;
+    game.scoreP1 = cloudData.score ?? game.scoreP1;
+  }
+})();
+</script>
 
 // ================= GAME =================
 let game = {
@@ -291,8 +349,12 @@ grid.appendChild(card);
 });
 }
 
-function equip(t,id){ game.eq[t]=id; renderCatalog(); }
-
+function equip(t,id){ 
+  game.eq[t]=id; 
+  save(); // 🔥 salva local + firebase
+  renderCatalog(); 
+    }
+    
 function pullGacha(){
 if(game.money<150) return alert("Sem moedas!");
 game.money-=150;
@@ -329,16 +391,27 @@ if(game.eq.skill==='style_setter'){ ball.vy=-12; ball.vx*=0.2; }
 }
 };
 
-function updateUI(){ document.getElementById('money-display').innerText=game.money; }
+function save() {
+  localStorage.setItem('v167_money', game.money);
+  localStorage.setItem('v167_inv', JSON.stringify(game.inv));
+  localStorage.setItem('v167_eq', JSON.stringify(game.eq));
 
-function setScreen(id){
-document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-if(id!=='none') document.getElementById(id).classList.add('active');
-updateUI();
-}
+  // 🔥 salva no Firebase também
+  if(window.saveCloud){
+    saveCloud({
+      money: game.money,
+      inv: game.inv,
+      eq: game.eq,
+      score: game.scoreP1
+    });
+  }
+    }
 
-updateUI();
-loop();
+syncCloud();
+    setTimeout(() => {
+  save();
+  alert("Salvo no Firebase 😈");
+}, 3000);
 </script>
 </body>
                                                                                       </html>
