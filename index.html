@@ -1,330 +1,227 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Vôlei Pro V1.6.7</title>
-    <style>
-        :root { 
-            --accent: #f1c40f; --ultra: #00fbff; --bg: #1a1a1a;
-            --common: #bdc3c7; --rare: #3498db; --epic: #9b59b6; --mythic: #e74c3c;
-        }
-        body { margin: 0; background: #000; font-family: 'Segoe UI', sans-serif; color: white; overflow: hidden; touch-action: none; height: 100vh; }
-        
-        .screen { display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 100; }
-        .active { display: flex; }
-
-        /* Catálogo */
-        .catalog-container { width: 95%; max-width: 700px; height: 85%; background: #2c3e50; border-radius: 15px; border: 3px solid var(--accent); overflow: hidden; display: flex; flex-direction: column; }
-        .tabs { display: flex; background: #34495e; }
-        .tab-btn { flex: 1; padding: 10px; border: none; background: none; color: white; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; font-size: 11px; }
-        .tab-btn.active-tab { border-bottom: 3px solid var(--accent); background: rgba(255,255,255,0.1); }
-        .item-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; overflow-y: auto; }
-        .item-card { background: #1e272e; border-radius: 8px; padding: 8px; text-align: center; border: 2px solid transparent; }
-        .item-card.equipped { border-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
-
-        /* HUD JOGO */
-        #hud { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 50; }
-        .hud-top { position: absolute; top: 10px; width: 100%; display: flex; justify-content: center; gap: 40px; font-weight: bold; font-size: 20px; text-shadow: 2px 2px #000; }
-        .controls { position: absolute; bottom: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; pointer-events: auto; }
-        .btn-act { width: 70px; height: 70px; background: rgba(0,0,0,0.6); border: 2px solid white; border-radius: 50%; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .energy-bar-wrap { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); width: 200px; height: 10px; background: #333; border: 1px solid white; border-radius: 5px; }
-        #energy-fill { width: 0%; height: 100%; background: var(--ultra); box-shadow: 0 0 10px var(--ultra); }
-
-        .btn-main { background: var(--accent); color: black; border: none; padding: 10px; margin: 4px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
-        canvas { width: 100vw; height: 100vh; display: block; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vôlei Pro 1.7</title>
+<style>
+:root {
+  --accent:#f1c40f; --ultra:#00fbff; --bg:#1a1a1a;
+  --common:#bdc3c7; --rare:#3498db; --epic:#9b59b6; --mythic:#e74c3c;
+}
+body{margin:0;background:#000;font-family:Segoe UI;color:white;overflow:hidden}
+.screen{display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:var(--bg);z-index:10}
+.active{display:flex}
+.btn-main{background:var(--accent);color:black;border:none;padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;width:220px}
+canvas{background:#222;display:block}
+#hud{position:absolute;inset:0;pointer-events:none;display:none}
+.controls{position:absolute;bottom:20px;width:100%;display:flex;justify-content:space-between;padding:0 30px;pointer-events:auto}
+.btn-act{width:70px;height:70px;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-weight:bold;background:rgba(0,0,0,.6)}
+</style>
 </head>
 <body>
 
-    <div id="screen-lobby" class="screen active">
-        <div style="text-align: center; background: #2c3e50; padding: 25px; border-radius: 20px; border: 3px solid var(--accent); width: 320px;">
-            <h1 style="margin:0 0 10px 0; color:var(--accent); font-size: 24px;">VÔLEI 1.6.7</h1>
-            <button class="btn-main" onclick="startMode('friendly')">JOGAR NORMAL</button>
-            <button class="btn-main" style="background: #e67e22" onclick="startMode('tournament')">MODO TORNEIO</button>
-            <button class="btn-main" style="background:#fff" onclick="openCatalog()">MEU CATÁLOGO</button>
-            <button class="btn-main" style="background:var(--ultra)" onclick="pullGacha()">ABRIR BAÚ ($150)</button>
-            <p style="font-size: 14px; margin-top: 10px;">Moedas: <span id="money-display" style="color:var(--accent)">0</span></p>
-        </div>
-    </div>
+<div id="screen-lobby" class="screen active">
+  <div style="text-align:center;background:#2c3e50;padding:25px;border-radius:20px;border:3px solid var(--accent)">
+    <h2 style="color:var(--accent)">VÔLEI PRO 🏐</h2>
+    <button class="btn-main" onclick="startGame()">JOGAR</button>
+    <button class="btn-main" onclick="openCatalog()">CATÁLOGO</button>
+    <p>Moedas: <span id="money">0</span></p>
+  </div>
+</div>
 
-    <div id="screen-catalog" class="screen">
-        <div class="catalog-container">
-            <div class="tabs">
-                <button class="tab-btn active-tab" onclick="switchTab('arena')">ARENAS</button>
-                <button class="tab-btn" onclick="switchTab('ball')">BOLAS</button>
-                <button class="tab-btn" onclick="switchTab('skill')">PODERES</button>
-                <button class="tab-btn" onclick="switchTab('skin')">SKINS</button>
-            </div>
-            <div class="item-grid" id="catalog-grid"></div>
-            <button class="btn-main" style="border-radius:0; height: 50px;" onclick="setScreen('screen-lobby')">VOLTAR AO MENU</button>
-        </div>
-    </div>
+<div id="screen-catalog" class="screen">
+  <div style="background:#2c3e50;padding:20px;border-radius:15px;border:3px solid var(--accent);width:300px">
+    <h3>SKINS & ESTILOS</h3>
+    <div id="catalog"></div>
+    <button class="btn-main" onclick="backLobby()">VOLTAR</button>
+  </div>
+</div>
 
-    <canvas id="gameCanvas"></canvas>
+<canvas id="game" width="800" height="400"></canvas>
 
-    <div id="hud">
-        <div class="hud-top">
-            <span style="color: #ff4757">VOCÊ: <span id="p1-score">0</span></span>
-            <span id="match-info" style="font-size: 14px; color: var(--accent)">AMISTOSO</span>
-            <span style="color: #2e86de">BOT: <span id="bot-score">0</span></span>
-        </div>
-        <div class="energy-bar-wrap"><div id="energy-fill"></div></div>
-        <div class="controls">
-            <div style="display: flex; gap: 15px;">
-                <div class="btn-act" id="m-left">←</div>
-                <div class="btn-act" id="m-right">→</div>
-                <div class="btn-act" style="background: rgba(255,255,255,0.2); width: 100px; border-radius: 10px;" id="m-dive">DIVE</div>
-            </div>
-            <div style="display: flex; gap: 15px;">
-                <div class="btn-act" style="background:var(--mythic); width: 100px; border-radius: 10px;" id="p-use">ESPECIAL</div>
-                <div class="btn-act" style="background:var(--accent); color:black;" id="m-jump">PULO</div>
-            </div>
-        </div>
+<div id="hud">
+  <div class="controls">
+    <div style="display:flex;gap:10px">
+      <div class="btn-act" id="left">←</div>
+      <div class="btn-act" id="right">→</div>
+      <div class="btn-act" id="dive">DIVE</div>
     </div>
+    <div style="display:flex;gap:10px">
+      <div class="btn-act" id="jump">PULO</div>
+      <div class="btn-act" id="skill">SKILL</div>
+    </div>
+  </div>
+</div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = 800; canvas.height = 400;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
+// ================= ITENS =================
 const ITEMS = [
-    {id:'arena_verde', name:'Deserto Verde', type:'arena', rarity:'common', icon:'🌵', color: '#2ecc71'},
-    {id:'arena_noite', name:'Noite Árida', type:'arena', rarity:'rare', icon:'🌑', color: '#1a1a2e'},
-    {id:'arena_rua', name:'Rua de Tarde', type:'arena', rarity:'common', icon:'🌇', color: '#e67e22'},
-    {id:'ball_normal', name:'Bola Comum', type:'ball', rarity:'common', icon:'🏐', color: 'white'},
-    {id:'ball_crystal', name:'Bola Mítica', type:'ball', rarity:'mythic', icon:'💎', color: '#00fbff'},
-    {id:'p_jump', name:'Super Pulo', type:'skill', rarity:'epic', icon:'🚀'},
-    {id:'p_mystery', name:'Gravidade', type:'skill', rarity:'epic', icon:'☄️'},
-    {id:'skin_default', name:'Normal', type:'skin', rarity:'common', icon:'👤', color:'red'},
-    {id:'skin_ninja', name:'Ninja', type:'skin', rarity:'epic', icon:'🥷', color:'#2c3e50'},
-    {id:'skin_robot', name:'Robô', type:'skin', rarity:'rare', icon:'🤖', color:'#95a5a6'}
-    {id:'style_asahi', name:'Asahi (Spike)', type:'skill', rarity:'mythic', icon:'💥'},
-{id:'style_noya', name:'Nishinoya (Dive)', type:'skill', rarity:'epic', icon:'🛡️'},
-{id:'style_setter', name:'Setter (Kenma/Kageyama)', type:'skill', rarity:'epic', icon:'🧠'},
+  // skins
+  {id:"skin_default", name:"Normal", type:"skin", color:"red"},
+  {id:"skin_ninja", name:"Ninja", type:"skin", color:"#111"},
+  {id:"skin_asahi", name:"Asahi", type:"skin", color:"orange"},
+  {id:"skin_noya", name:"Nishinoya", type:"skin", color:"yellow"},
+  {id:"skin_setter", name:"Setter", type:"skin", color:"#2e86de"},
+
+  // estilos
+  {id:"style_none", name:"Normal", type:"style"},
+  {id:"style_asahi", name:"Asahi Spike", type:"style"},
+  {id:"style_noya", name:"Nishinoya Dive", type:"style"},
+  {id:"style_setter", name:"Setter Levantador", type:"style"},
 ];
-    {id:'skin_asahi', name:'Asahi', type:'skin', rarity:'mythic', color:'#ff6b00'},
-{id:'skin_noya', name:'Nishinoya', type:'skin', rarity:'epic', color:'#f1c40f'},
-{id:'skin_setter', name:'Kageyama', type:'skin', rarity:'epic', color:'#2e86de'},
 
+// ================= GAME =================
 let game = {
-    money: parseInt(localStorage.getItem('v167_money')) || 500,
-    inv: JSON.parse(localStorage.getItem('v167_inv')) || ['arena_verde', 'ball_normal', 'skin_default'],
-    eq: { arena:'arena_verde', ball:'ball_normal', skill:'none', skin:'skin_default' },
-    active: false, mode: 'friendly', energy: 0, currentTab: 'arena',
-    scoreP1: 0, scoreBot: 0, lastWinner: 'p1'
+  money: 300,
+  skin:"skin_default",
+  style:"style_none",
+  active:false,
+  energy:0
 };
 
-let ball = { x:100, y:-50, vx:0, vy:0 };
-let p1 = { x:100, y:360, vy:0, dash:0 };
-let bot = { x:650, y:360, vy:0 };
-let inputs = { left: false, right: false };
+let p1={x:100,y:340,vy:0,dash:0};
+let bot={x:650,y:340,vy:0};
+let ball={x:400,y:100,vx:2,vy:0};
 
-function save() { localStorage.setItem('v167_money', game.money); localStorage.setItem('v167_inv', JSON.stringify(game.inv)); }
+let input={left:false,right:false};
 
-// SISTEMA DE SPAWN (NOVO)
-function spawnBall() {
-    if(game.lastWinner === 'p1') {
-        ball.x = p1.x + 22;
-    } else {
-        ball.x = bot.x + 22;
-    }
-    ball.y = 50;
-    ball.vx = 0;
-    ball.vy = 0;
+// ================= UI =================
+function updateUI(){
+  document.getElementById("money").innerText = game.money;
 }
 
-function startMode(m) {
-    game.mode = m;
-    game.scoreP1 = 0; game.scoreBot = 0;
-    game.lastWinner = 'p1';
-    document.getElementById('p1-score').innerText = '0';
-    document.getElementById('bot-score').innerText = '0';
-    document.getElementById('match-info').innerText = m === 'friendly' ? 'AMISTOSO' : 'TORNEIO';
-    setScreen('none');
-    document.getElementById('hud').style.display = 'block';
-    game.active = true;
-    spawnBall();
+function startGame(){
+  document.getElementById("screen-lobby").classList.remove("active");
+  document.getElementById("hud").style.display="block";
+  game.active=true;
 }
 
-function loop() {
-    if(game.active) {
-        // P1
-        let speed = 5; if(p1.dash > 0) { speed = 12; p1.dash--; }
-        if(inputs.left) p1.x -= speed; if(inputs.right) p1.x += speed;
-        p1.vy += 0.22; p1.y += p1.vy;
-        if(p1.y >= 360) { p1.y = 360; p1.vy = 0; }
-        p1.x = Math.max(0, Math.min(355, p1.x));
-
-        // BOLA
-        ball.vy += 0.18; ball.x += ball.vx; ball.y += ball.vy;
-        if(ball.x < 0 || ball.x > 800) ball.vx *= -1;
-
-        if(ball.y > 395) {
-            if(ball.x < 400) { game.scoreBot++; game.lastWinner = 'bot'; }
-            else { game.scoreP1++; game.lastWinner = 'p1'; }
-            document.getElementById('p1-score').innerText = game.scoreP1;
-            document.getElementById('bot-score').innerText = game.scoreBot;
-            
-            if(game.scoreP1 >= 10 || game.scoreBot >= 10) {
-                game.active = false;
-                alert(game.scoreP1 >= 10 ? "VOCÊ VENCEU!" : "DERROTA!");
-                game.money += (game.scoreP1 >= 10 ? 100 : 20);
-                save(); location.reload();
-            } else spawnBall();
-        }
-
-        // REDE
-        if(ball.x > 395 && ball.x < 405 && ball.y > 280) ball.vx *= -1.2;
-
-        // COLISÕES
-        [p1, bot].forEach(p => {
-            if(ball.x > p.x && ball.x < p.x+45 && ball.y > p.y-65 && ball.y < p.y) {
-
-    let style = game.eq.skill;
-
-    // NORMAL
-    let power = -7.2;
-    let speed = 0.45;
-
-    // 🥊 ASAHI SPIKE
-    if(style === 'style_asahi') {
-        power = -12;
-        speed = 0.9;
-        game.energy = Math.max(0, game.energy - 10);
-    }
-
-    // 🧠 SETTER (LEVANTADOR)
-    if(style === 'style_setter') {
-        power = -10;
-        ball.vx *= 0.3; // slow motion
-        ball.y -= 20; // sobe mais
-    }
-
-    ball.vy = power;
-    ball.vx = (ball.x - (p.x+22)) * speed;
-
-    if(p === p1) game.energy = Math.min(100, game.energy + 15);
-    }
-                ball.vy = -7.2; ball.vx = (ball.x - (p.x+22))*0.45;
-                if(p === p1) game.energy = Math.min(100, game.energy + 20);
-            }
-        });
-
-        // BOT IA
-        let bSpeed = game.mode === 'tournament' ? 4.2 : 3.2;
-        bot.x += (ball.x > bot.x + 10 ? bSpeed : -bSpeed);
-        bot.x = Math.max(400, Math.min(755, bot.x));
-
-        document.getElementById('energy-fill').style.width = game.energy + "%";
-    }
-
-    // DRAW
-    let arena = ITEMS.find(i => i.id === game.eq.arena);
-    ctx.fillStyle = arena.color; ctx.fillRect(0,0,800,400);
-    if(game.eq.arena === 'arena_noite') {
-        ctx.fillStyle = "white"; for(let i=0;i<30;i++) ctx.fillRect(Math.sin(i)*800, Math.cos(i)*200, 2, 2);
-    }
-    ctx.fillStyle = '#d4a373'; ctx.fillRect(0,360,800,40); // Chão
-    ctx.fillStyle = 'white'; ctx.fillRect(398,280,4,80); // Rede
-
-    let skin = ITEMS.find(i => i.id === game.eq.skin);
-    function drawPlayer(p, skinId, isBot=false) {
-    let skin = ITEMS.find(i => i.id === skinId);
-
-    // corpo
-    ctx.fillStyle = skin.color || (isBot ? 'blue' : 'red');
-    ctx.fillRect(p.x, p.y-50, 40, 50);
-
-    // cabeça
-    ctx.beginPath();
-    ctx.arc(p.x+20, p.y-60, 12, 0, Math.PI*2);
-    ctx.fill();
-
-    // detalhes por skin 👇
-    if(skinId === 'skin_ninja') {
-        ctx.fillStyle = "black";
-        ctx.fillRect(p.x+5, p.y-40, 30, 10); // máscara
-    }
-
-    if(skinId === 'skin_robot') {
-        ctx.strokeStyle = "#00fbff";
-        ctx.strokeRect(p.x, p.y-50, 40, 50);
-    }
-
-    if(skinId === 'skin_asahi') {
-        ctx.fillStyle = "orange";
-        ctx.fillRect(p.x+10, p.y-70, 20, 5); // cabelo
-    }
-    }
-    ctx.fillStyle = 'blue'; ctx.fillRect(bot.x, bot.y-65, 45, 65);
-    
-    ctx.fillStyle = ITEMS.find(i => i.id === game.eq.ball).color;
-    ctx.beginPath(); ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2); ctx.fill();
-
-    requestAnimationFrame(loop);
+function openCatalog(){
+  document.getElementById("screen-lobby").classList.remove("active");
+  document.getElementById("screen-catalog").classList.add("active");
+  renderCatalog();
 }
 
-// CATALOGO LOGIC
-function openCatalog() { setScreen('screen-catalog'); renderCatalog(); }
-function switchTab(t) { game.currentTab = t; renderCatalog(); }
-function renderCatalog() {
-    const grid = document.getElementById('catalog-grid'); grid.innerHTML = '';
-    ITEMS.filter(i => i.type === game.currentTab).forEach(item => {
-        const owned = game.inv.includes(item.id);
-        const card = document.createElement('div');
-        card.className = `item-card ${game.eq[item.type] === item.id ? 'equipped' : ''}`;
-        card.style.opacity = owned ? '1' : '0.3';
-        card.innerHTML = `<div style="font-size:24px">${item.icon}</div><div style="font-size:9px; height:20px">${item.name}</div>
-            <button class="btn-main" style="font-size:9px" ${!owned?'disabled':''} onclick="equip('${item.type}','${item.id}')">SELECT</button>`;
-        grid.appendChild(card);
-    });
-}
-function equip(t, id) { game.eq[t] = id; renderCatalog(); }
-
-function pullGacha() {
-    if(game.money < 150) return alert("Sem moedas!");
-    game.money -= 150;
-    let item = ITEMS[Math.floor(Math.random()*ITEMS.length)];
-    if(!game.inv.includes(item.id)) game.inv.push(item.id); else game.money += 60;
-    save(); updateUI(); alert("Ganhou: " + item.name);
+function backLobby(){
+  document.getElementById("screen-catalog").classList.remove("active");
+  document.getElementById("screen-lobby").classList.add("active");
 }
 
-// CONTROLES
-const bH = (id, s) => { 
-    const e = document.getElementById(id); 
-    e.onmousedown = e.ontouchstart = (x) => { x.preventDefault(); inputs[s] = true; };
-    e.onmouseup = e.ontouchend = () => inputs[s] = false;
-};
-bH('m-left', 'left'); bH('m-right', 'right');
-document.getElementById('m-jump').onclick = () => { if(p1.y>=360) p1.vy = -8.5; };
+function renderCatalog(){
+  const div=document.getElementById("catalog");
+  div.innerHTML="";
+  ITEMS.forEach(it=>{
+    const btn=document.createElement("button");
+    btn.className="btn-main";
+    btn.innerText=it.name;
+    btn.onclick=()=>{
+      if(it.type==="skin") game.skin=it.id;
+      if(it.type==="style") game.style=it.id;
+    };
+    div.appendChild(btn);
+  });
+}
 
-document.getElementById('p-use').onclick = () => {
-    if(game.energy >= 100) {
-        game.energy = 0;
-        if(game.eq.skill === 'p_jump') p1.vy = -14;
-        if(game.eq.skill === 'p_mystery') { ball.vy = 12; ball.vx *= 2.5; }
-    }
+// ================= CONTROLES =================
+function bind(id,key){
+  const e=document.getElementById(id);
+  e.onmousedown=e.ontouchstart=()=>input[key]=true;
+  e.onmouseup=e.ontouchend=()=>input[key]=false;
+}
+bind("left","left");
+bind("right","right");
+
+document.getElementById("jump").onclick=()=>{
+  if(p1.y>=340) p1.vy=-9;
 };
 
-function updateUI() { document.getElementById('money-display').innerText = game.money; }
-    document.getElementById('m-dive').onclick = () => {
-
-    let style = game.eq.skill;
-
-    // normal dash
-    p1.dash = 22;
-
-    // 🛡️ NISHINOYA MODE
-    if(style === 'style_noya') {
-        p1.dash = 50; // mergulho maior
-        p1.y += 15; // desliza no chão
-    }
+document.getElementById("dive").onclick=()=>{
+  p1.dash=20;
+  if(game.style==="style_noya") p1.dash=40;
 };
-function setScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); if(id!=='none') document.getElementById(id).classList.add('active'); updateUI(); }
+
+document.getElementById("skill").onclick=()=>{
+  if(game.energy>=100){
+    game.energy=0;
+    if(game.style==="style_asahi") ball.vy=-14;
+    if(game.style==="style_setter"){
+      ball.vy=-12;
+      ball.vx*=0.3;
+    }
+  }
+};
+
+// ================= LOOP =================
+function drawPlayer(p,isBot=false){
+  let skin=ITEMS.find(i=>i.id==(isBot?"skin_default":game.skin));
+  ctx.fillStyle=skin.color;
+  ctx.fillRect(p.x,p.y-50,40,50);
+  ctx.beginPath();
+  ctx.arc(p.x+20,p.y-60,12,0,Math.PI*2);
+  ctx.fill();
+}
+
+function loop(){
+  if(game.active){
+
+    // player
+    let speed=4;
+    if(p1.dash>0){speed=10;p1.dash--;}
+    if(input.left) p1.x-=speed;
+    if(input.right) p1.x+=speed;
+    p1.vy+=0.4;
+    p1.y+=p1.vy;
+    if(p1.y>340){p1.y=340;p1.vy=0;}
+
+    // ball
+    ball.vy+=0.3;
+    ball.x+=ball.vx;
+    ball.y+=ball.vy;
+
+    if(ball.x<0||ball.x>800) ball.vx*=-1;
+    if(ball.y>380){ball.x=400;ball.y=100;ball.vx=2;ball.vy=0;}
+
+    // collision player
+    if(ball.x>p1.x && ball.x<p1.x+40 && ball.y>p1.y-60){
+      let power=-8;
+      let speedBall=0.5;
+
+      if(game.style==="style_asahi"){power=-13;speedBall=1;}
+      if(game.style==="style_setter"){power=-10;speedBall=0.2;}
+
+      ball.vy=power;
+      ball.vx=(ball.x-(p1.x+20))*speedBall;
+      game.energy=Math.min(100,game.energy+15);
+    }
+
+    // bot AI
+    bot.x += (ball.x>bot.x?2:-2);
+  }
+
+  // draw
+  ctx.clearRect(0,0,800,400);
+  ctx.fillStyle="#d4a373";
+  ctx.fillRect(0,360,800,40);
+  ctx.fillStyle="white";
+  ctx.fillRect(398,280,4,80);
+
+  drawPlayer(p1,false);
+  drawPlayer(bot,true);
+
+  ctx.fillStyle="white";
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,10,0,Math.PI*2);
+  ctx.fill();
+
+  requestAnimationFrame(loop);
+}
 
 updateUI();
 loop();
 </script>
 </body>
-</html>
+    </html>
