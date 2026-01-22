@@ -276,30 +276,215 @@ event.target.classList.add('active-tab');
 renderCatalog();
 }
 
-function renderCatalog(){
-const grid=document.getElementById('catalog-grid');
-grid.innerHTML='';
-ITEMS.filter(i=>i.type===game.currentTab).forEach(item=>{
-const owned=game.inv.includes(item.id);
-const card=document.createElement('div');
-card.className=`item-card ${game.eq[item.type]===item.id?'equipped':''}`;
-card.style.opacity=owned?'1':'0.3';
-card.innerHTML=`<div style="font-size:24px">${item.icon}</div>
-<div style="font-size:10px">${item.name}</div>
-<button class="btn-main" style="font-size:9px" ${!owned?'disabled':''} onclick="equip('${item.type}','${item.id}')">EQUIPAR</button>`;
-grid.appendChild(card);
-});
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 800; canvas.height = 400;
+
+// ================= ITENS =================
+const ITEMS = [
+{ id:'arena_verde', name:'Deserto Verde', type:'arena', rarity:'common', icon:'🌵', color:'#2ecc71'},
+{ id:'arena_noite', name:'Noite Árida', type:'arena', rarity:'rare', icon:'🌑', color:'#1a1a2e'},
+{ id:'arena_rua', name:'Rua de Tarde', type:'arena', rarity:'common', icon:'🌇', color:'#e67e22'},
+{ id:'arena_neon', name:'Neon Court', type:'arena', rarity:'epic', icon:'⚡', color:'#050014'},
+
+{ id:'ball_normal', name:'Bola Comum', type:'ball', rarity:'common', icon:'🏐', color:'white'},
+{ id:'ball_crystal', name:'Bola Mítica', type:'ball', rarity:'mythic', icon:'💎', color:'#00fbff'},
+
+// estilos
+{ id:'style_none', name:'Normal', type:'skill', rarity:'common', icon:'⚪'},
+{ id:'style_asahi', name:'Asahi (Spike)', type:'skill', rarity:'mythic', icon:'💥'},
+{ id:'style_noya', name:'Nishinoya (Dive)', type:'skill', rarity:'epic', icon:'🛡️'},
+{ id:'style_setter', name:'Setter (Kenma/Kageyama)', type:'skill', rarity:'epic', icon:'🧠'},
+{ id:'style_korai', name:'Korai (Speed)', type:'skill', rarity:'mythic', icon:'⚡'},
+
+// skins
+{ id:'skin_default', name:'Normal', type:'skin', rarity:'common', icon:'👤', color:'red'},
+{ id:'skin_ninja', name:'Ninja', type:'skin', rarity:'epic', icon:'🥷', color:'#111'},
+{ id:'skin_robot', name:'Robô', type:'skin', rarity:'rare', icon:'🤖', color:'#95a5a6'},
+{ id:'skin_asahi', name:'Asahi', type:'skin', rarity:'mythic', icon:'🔥', color:'#ff6b00'},
+{ id:'skin_noya', name:'Nishinoya', type:'skin', rarity:'epic', icon:'⚡', color:'#f1c40f'},
+{ id:'skin_setter', name:'Setter', type:'skin', rarity:'epic', icon:'🧠', color:'#2e86de'},
+];
+
+// ================= GAME =================
+let game = {
+money: parseInt(localStorage.getItem('v17_money')) || 500,
+inv: JSON.parse(localStorage.getItem('v17_inv')) || ['arena_verde','ball_normal','skin_default','style_none'],
+eq: { arena:'arena_verde', ball:'ball_normal', skill:'style_none', skin:'skin_default' },
+active:false, mode:'friendly', energy:0, currentTab:'arena',
+scoreP1:0, scoreBot:0, lastWinner:'p1'
+};
+
+let ball = { x:100, y:-50, vx:0, vy:0, slow:0 };
+let p1 = { x:100, y:360, vy:0, dash:0 };
+let bot = { x:650, y:360, vy:0 };
+let inputs = { left:false, right:false };
+
+function save(){
+localStorage.setItem('v17_money', game.money);
+localStorage.setItem('v17_inv', JSON.stringify(game.inv));
 }
 
-function equip(t,id){ game.eq[t]=id; renderCatalog(); }
+// ================= BOTÃO DINÂMICO =================
+function updateSkillButton(){
+const btn=document.getElementById("m-dive");
+let s=game.eq.skill;
 
+if(s==="style_setter") btn.innerText="SET";
+else if(s==="style_asahi") btn.innerText="SPIKE";
+else if(s==="style_korai") btn.innerText="DASH";
+else if(s==="style_noya") btn.innerText="SUPER DIVE";
+else btn.innerText="DIVE";
+}
+
+// ================= SPAWN =================
+function spawnBall(){
+ball.x = (game.lastWinner==='p1'?p1.x:bot.x)+22;
+ball.y = 50; ball.vx = 0; ball.vy = 0;
+}
+
+// ================= LOOP =================
+function loop(){
+if(game.active){
+
+// player
+let speed=5;
+if(p1.dash>0){speed=12;p1.dash--;}
+if(inputs.left) p1.x-=speed;
+if(inputs.right) p1.x+=speed;
+p1.vy+=0.22; p1.y+=p1.vy;
+if(p1.y>=360){p1.y=360;p1.vy=0;}
+p1.x=Math.max(0,Math.min(355,p1.x));
+
+// bola
+let grav = ball.slow>0 ? 0.05 : 0.18;
+ball.vy+=grav;
+ball.x+=ball.vx;
+ball.y+=ball.vy;
+if(ball.slow>0) ball.slow--;
+
+if(ball.x<0||ball.x>800) ball.vx*=-1;
+
+// ponto
+if(ball.y>395){
+if(ball.x<400){game.scoreBot++;game.lastWinner='bot';}
+else{game.scoreP1++;game.lastWinner='p1';}
+document.getElementById('p1-score').innerText=game.scoreP1;
+document.getElementById('bot-score').innerText=game.scoreBot;
+spawnBall();
+}
+
+// colisão
+[p1,bot].forEach(p=>{
+if(ball.x>p.x && ball.x<p.x+45 && ball.y>p.y-65 && ball.y<p.y){
+
+let style = game.eq.skill;
+let power=-7.2;
+let speedBall=0.45;
+
+// ASAHI
+if(style==='style_asahi'){
+power=-13;
+speedBall=1;
+}
+
+// SETTER
+if(style==='style_setter'){
+power=-10;
+ball.vx*=0.3;
+ball.y-=20;
+}
+
+// NOYA = slow motion
+if(style==='style_noya'){
+ball.slow=25;
+power=-8.5;
+}
+
+// KORAI = VELOCIDADE ABSURDA
+if(style==='style_korai'){
+power=-11;
+speedBall=2.5;
+}
+
+ball.vy=power;
+ball.vx=(ball.x-(p.x+22))*speedBall;
+
+if(p===p1) game.energy=Math.min(100,game.energy+15);
+}
+});
+
+// bot
+let bSpeed=game.mode==='tournament'?4.2:3.2;
+bot.x += (ball.x>bot.x+10?bSpeed:-bSpeed);
+bot.x=Math.max(400,Math.min(755,bot.x));
+
+document.getElementById('energy-fill').style.width=game.energy+"%";
+}
+
+// DRAW ARENA
+let arena=ITEMS.find(i=>i.id===game.eq.arena);
+ctx.fillStyle=arena.color;
+ctx.fillRect(0,0,800,400);
+
+// neon arena efeito
+if(arena.id==="arena_neon"){
+ctx.strokeStyle="#00fbff";
+ctx.lineWidth=2;
+ctx.strokeRect(0,0,800,400);
+}
+
+// chão
+ctx.fillStyle='#d4a373';
+ctx.fillRect(0,360,800,40);
+ctx.fillStyle='white';
+ctx.fillRect(398,280,4,80);
+
+// partículas Korai
+if(game.eq.skill==="style_korai"){
+ctx.fillStyle="#00fbff";
+for(let i=0;i<5;i++){
+ctx.beginPath();
+ctx.arc(ball.x+Math.random()*10-5, ball.y+Math.random()*10-5, 2, 0, Math.PI*2);
+ctx.fill();
+}
+}
+
+// bola
+ctx.fillStyle=ITEMS.find(i=>i.id===game.eq.ball).color;
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,10,0,Math.PI*2);
+ctx.fill();
+
+requestAnimationFrame(loop);
+}
+
+// ================= GACHA ANIMADO =================
 function pullGacha(){
 if(game.money<150) return alert("Sem moedas!");
 game.money-=150;
+updateUI();
+
+let overlay=document.createElement("div");
+overlay.style.position="fixed";
+overlay.style.inset=0;
+overlay.style.background="rgba(0,0,0,0.9)";
+overlay.style.display="flex";
+overlay.style.alignItems="center";
+overlay.style.justifyContent="center";
+overlay.style.fontSize="40px";
+overlay.innerText="🎰 GIRANDO...";
+document.body.appendChild(overlay);
+
+setTimeout(()=>{
 let item=ITEMS[Math.floor(Math.random()*ITEMS.length)];
 if(!game.inv.includes(item.id)) game.inv.push(item.id);
 else game.money+=60;
-save(); updateUI(); alert("Você ganhou: "+item.name);
+save(); updateUI();
+overlay.innerHTML=`<div style="text-align:center">✨ ${item.icon}<br>${item.name}</div>`;
+setTimeout(()=>overlay.remove(),1200);
+},1200);
 }
 
 // ================= CONTROLES =================
@@ -314,27 +499,264 @@ bind('m-right','right');
 document.getElementById('m-jump').onclick=()=>{ if(p1.y>=360) p1.vy=-8.5; };
 
 document.getElementById('m-dive').onclick=()=>{
-p1.dash=22;
-if(game.eq.skill==='style_noya'){
-p1.dash=50;
-p1.y+=15;
+let s=game.eq.skill;
+
+if(s==="style_setter"){
+ball.vy=-15;
+}
+else if(s==="style_asahi"){
+ball.vy=-18;
+}
+else if(s==="style_korai"){
+p1.dash=40;
+}
+else{
+p1.dash = s==="style_noya"?50:22;
 }
 };
 
-document.getElementById('p-use').onclick=()=>{
-if(game.energy>=100){
-game.energy=0;
-if(game.eq.skill==='style_asahi') ball.vy=-16;
-if(game.eq.skill==='style_setter'){ ball.vy=-12; ball.vx*=0.2; }
-}
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 800; canvas.height = 400;
+
+// ================= ITENS =================
+const ITEMS = [
+{ id:'arena_verde', name:'Deserto Verde', type:'arena', rarity:'common', icon:'🌵', color:'#2ecc71'},
+{ id:'arena_noite', name:'Noite Árida', type:'arena', rarity:'rare', icon:'🌑', color:'#1a1a2e'},
+{ id:'arena_rua', name:'Rua de Tarde', type:'arena', rarity:'common', icon:'🌇', color:'#e67e22'},
+{ id:'arena_neon', name:'Neon Court', type:'arena', rarity:'epic', icon:'⚡', color:'#050014'},
+
+{ id:'ball_normal', name:'Bola Comum', type:'ball', rarity:'common', icon:'🏐', color:'white'},
+{ id:'ball_crystal', name:'Bola Mítica', type:'ball', rarity:'mythic', icon:'💎', color:'#00fbff'},
+
+// estilos
+{ id:'style_none', name:'Normal', type:'skill', rarity:'common', icon:'⚪'},
+{ id:'style_asahi', name:'Asahi (Spike)', type:'skill', rarity:'mythic', icon:'💥'},
+{ id:'style_noya', name:'Nishinoya (Dive)', type:'skill', rarity:'epic', icon:'🛡️'},
+{ id:'style_setter', name:'Setter (Kenma/Kageyama)', type:'skill', rarity:'epic', icon:'🧠'},
+{ id:'style_korai', name:'Korai (Speed)', type:'skill', rarity:'mythic', icon:'⚡'},
+
+// skins
+{ id:'skin_default', name:'Normal', type:'skin', rarity:'common', icon:'👤', color:'red'},
+{ id:'skin_ninja', name:'Ninja', type:'skin', rarity:'epic', icon:'🥷', color:'#111'},
+{ id:'skin_robot', name:'Robô', type:'skin', rarity:'rare', icon:'🤖', color:'#95a5a6'},
+{ id:'skin_asahi', name:'Asahi', type:'skin', rarity:'mythic', icon:'🔥', color:'#ff6b00'},
+{ id:'skin_noya', name:'Nishinoya', type:'skin', rarity:'epic', icon:'⚡', color:'#f1c40f'},
+{ id:'skin_setter', name:'Setter', type:'skin', rarity:'epic', icon:'🧠', color:'#2e86de'},
+];
+
+// ================= GAME =================
+let game = {
+money: parseInt(localStorage.getItem('v17_money')) || 500,
+inv: JSON.parse(localStorage.getItem('v17_inv')) || ['arena_verde','ball_normal','skin_default','style_none'],
+eq: { arena:'arena_verde', ball:'ball_normal', skill:'style_none', skin:'skin_default' },
+active:false, mode:'friendly', energy:0, currentTab:'arena',
+scoreP1:0, scoreBot:0, lastWinner:'p1'
 };
 
-function updateUI(){ document.getElementById('money-display').innerText=game.money; }
+let ball = { x:100, y:-50, vx:0, vy:0, slow:0 };
+let p1 = { x:100, y:360, vy:0, dash:0 };
+let bot = { x:650, y:360, vy:0 };
+let inputs = { left:false, right:false };
 
-function setScreen(id){
-document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-if(id!=='none') document.getElementById(id).classList.add('active');
+function save(){
+localStorage.setItem('v17_money', game.money);
+localStorage.setItem('v17_inv', JSON.stringify(game.inv));
+}
+
+// ================= BOTÃO DINÂMICO =================
+function updateSkillButton(){
+const btn=document.getElementById("m-dive");
+let s=game.eq.skill;
+
+if(s==="style_setter") btn.innerText="SET";
+else if(s==="style_asahi") btn.innerText="SPIKE";
+else if(s==="style_korai") btn.innerText="DASH";
+else if(s==="style_noya") btn.innerText="SUPER DIVE";
+else btn.innerText="DIVE";
+}
+
+// ================= SPAWN =================
+function spawnBall(){
+ball.x = (game.lastWinner==='p1'?p1.x:bot.x)+22;
+ball.y = 50; ball.vx = 0; ball.vy = 0;
+}
+
+// ================= LOOP =================
+function loop(){
+if(game.active){
+
+// player
+let speed=5;
+if(p1.dash>0){speed=12;p1.dash--;}
+if(inputs.left) p1.x-=speed;
+if(inputs.right) p1.x+=speed;
+p1.vy+=0.22; p1.y+=p1.vy;
+if(p1.y>=360){p1.y=360;p1.vy=0;}
+p1.x=Math.max(0,Math.min(355,p1.x));
+
+// bola
+let grav = ball.slow>0 ? 0.05 : 0.18;
+ball.vy+=grav;
+ball.x+=ball.vx;
+ball.y+=ball.vy;
+if(ball.slow>0) ball.slow--;
+
+if(ball.x<0||ball.x>800) ball.vx*=-1;
+
+// ponto
+if(ball.y>395){
+if(ball.x<400){game.scoreBot++;game.lastWinner='bot';}
+else{game.scoreP1++;game.lastWinner='p1';}
+document.getElementById('p1-score').innerText=game.scoreP1;
+document.getElementById('bot-score').innerText=game.scoreBot;
+spawnBall();
+}
+
+// colisão
+[p1,bot].forEach(p=>{
+if(ball.x>p.x && ball.x<p.x+45 && ball.y>p.y-65 && ball.y<p.y){
+
+let style = game.eq.skill;
+let power=-7.2;
+let speedBall=0.45;
+
+// ASAHI
+if(style==='style_asahi'){
+power=-13;
+speedBall=1;
+}
+
+// SETTER
+if(style==='style_setter'){
+power=-10;
+ball.vx*=0.3;
+ball.y-=20;
+}
+
+// NOYA = slow motion
+if(style==='style_noya'){
+ball.slow=25;
+power=-8.5;
+}
+
+// KORAI = VELOCIDADE ABSURDA
+if(style==='style_korai'){
+power=-11;
+speedBall=2.5;
+}
+
+ball.vy=power;
+ball.vx=(ball.x-(p.x+22))*speedBall;
+
+if(p===p1) game.energy=Math.min(100,game.energy+15);
+}
+});
+
+// bot
+let bSpeed=game.mode==='tournament'?4.2:3.2;
+bot.x += (ball.x>bot.x+10?bSpeed:-bSpeed);
+bot.x=Math.max(400,Math.min(755,bot.x));
+
+document.getElementById('energy-fill').style.width=game.energy+"%";
+}
+
+// DRAW ARENA
+let arena=ITEMS.find(i=>i.id===game.eq.arena);
+ctx.fillStyle=arena.color;
+ctx.fillRect(0,0,800,400);
+
+// neon arena efeito
+if(arena.id==="arena_neon"){
+ctx.strokeStyle="#00fbff";
+ctx.lineWidth=2;
+ctx.strokeRect(0,0,800,400);
+}
+
+// chão
+ctx.fillStyle='#d4a373';
+ctx.fillRect(0,360,800,40);
+ctx.fillStyle='white';
+ctx.fillRect(398,280,4,80);
+
+// partículas Korai
+if(game.eq.skill==="style_korai"){
+ctx.fillStyle="#00fbff";
+for(let i=0;i<5;i++){
+ctx.beginPath();
+ctx.arc(ball.x+Math.random()*10-5, ball.y+Math.random()*10-5, 2, 0, Math.PI*2);
+ctx.fill();
+}
+}
+
+// bola
+ctx.fillStyle=ITEMS.find(i=>i.id===game.eq.ball).color;
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,10,0,Math.PI*2);
+ctx.fill();
+
+requestAnimationFrame(loop);
+}
+
+// ================= GACHA ANIMADO =================
+function pullGacha(){
+if(game.money<150) return alert("Sem moedas!");
+game.money-=150;
 updateUI();
+
+let overlay=document.createElement("div");
+overlay.style.position="fixed";
+overlay.style.inset=0;
+overlay.style.background="rgba(0,0,0,0.9)";
+overlay.style.display="flex";
+overlay.style.alignItems="center";
+overlay.style.justifyContent="center";
+overlay.style.fontSize="40px";
+overlay.innerText="🎰 GIRANDO...";
+document.body.appendChild(overlay);
+
+setTimeout(()=>{
+let item=ITEMS[Math.floor(Math.random()*ITEMS.length)];
+if(!game.inv.includes(item.id)) game.inv.push(item.id);
+else game.money+=60;
+save(); updateUI();
+overlay.innerHTML=`<div style="text-align:center">✨ ${item.icon}<br>${item.name}</div>`;
+setTimeout(()=>overlay.remove(),1200);
+},1200);
+}
+
+// ================= CONTROLES =================
+const bind=(id,key)=>{
+const e=document.getElementById(id);
+e.onmousedown=e.ontouchstart=(x)=>{x.preventDefault();inputs[key]=true;}
+e.onmouseup=e.ontouchend=()=>inputs[key]=false;
+};
+bind('m-left','left');
+bind('m-right','right');
+
+document.getElementById('m-jump').onclick=()=>{ if(p1.y>=360) p1.vy=-8.5; };
+
+document.getElementById('m-dive').onclick=()=>{
+let s=game.eq.skill;
+
+if(s==="style_setter"){
+ball.vy=-15;
+}
+else if(s==="style_asahi"){
+ball.vy=-18;
+}
+else if(s==="style_korai"){
+p1.dash=40;
+}
+else{
+p1.dash = s==="style_noya"?50:22;
+}
+};
+
+function updateUI(){
+document.getElementById('money-display').innerText=game.money;
+updateSkillButton();
 }
 
 updateUI();
