@@ -99,7 +99,13 @@ const ITEMS = [
     {id:'skin_default', name:'Normal', type:'skin', rarity:'common', icon:'👤', color:'red'},
     {id:'skin_ninja', name:'Ninja', type:'skin', rarity:'epic', icon:'🥷', color:'#2c3e50'},
     {id:'skin_robot', name:'Robô', type:'skin', rarity:'rare', icon:'🤖', color:'#95a5a6'}
+    {id:'style_asahi', name:'Asahi (Spike)', type:'skill', rarity:'mythic', icon:'💥'},
+{id:'style_noya', name:'Nishinoya (Dive)', type:'skill', rarity:'epic', icon:'🛡️'},
+{id:'style_setter', name:'Setter (Kenma/Kageyama)', type:'skill', rarity:'epic', icon:'🧠'},
 ];
+    {id:'skin_asahi', name:'Asahi', type:'skin', rarity:'mythic', color:'#ff6b00'},
+{id:'skin_noya', name:'Nishinoya', type:'skin', rarity:'epic', color:'#f1c40f'},
+{id:'skin_setter', name:'Kageyama', type:'skin', rarity:'epic', color:'#2e86de'},
 
 let game = {
     money: parseInt(localStorage.getItem('v167_money')) || 500,
@@ -174,6 +180,32 @@ function loop() {
         // COLISÕES
         [p1, bot].forEach(p => {
             if(ball.x > p.x && ball.x < p.x+45 && ball.y > p.y-65 && ball.y < p.y) {
+
+    let style = game.eq.skill;
+
+    // NORMAL
+    let power = -7.2;
+    let speed = 0.45;
+
+    // 🥊 ASAHI SPIKE
+    if(style === 'style_asahi') {
+        power = -12;
+        speed = 0.9;
+        game.energy = Math.max(0, game.energy - 10);
+    }
+
+    // 🧠 SETTER (LEVANTADOR)
+    if(style === 'style_setter') {
+        power = -10;
+        ball.vx *= 0.3; // slow motion
+        ball.y -= 20; // sobe mais
+    }
+
+    ball.vy = power;
+    ball.vx = (ball.x - (p.x+22)) * speed;
+
+    if(p === p1) game.energy = Math.min(100, game.energy + 15);
+    }
                 ball.vy = -7.2; ball.vx = (ball.x - (p.x+22))*0.45;
                 if(p === p1) game.energy = Math.min(100, game.energy + 20);
             }
@@ -197,7 +229,34 @@ function loop() {
     ctx.fillStyle = 'white'; ctx.fillRect(398,280,4,80); // Rede
 
     let skin = ITEMS.find(i => i.id === game.eq.skin);
-    ctx.fillStyle = skin.color; ctx.fillRect(p1.x, p1.y-65, 45, 65);
+    function drawPlayer(p, skinId, isBot=false) {
+    let skin = ITEMS.find(i => i.id === skinId);
+
+    // corpo
+    ctx.fillStyle = skin.color || (isBot ? 'blue' : 'red');
+    ctx.fillRect(p.x, p.y-50, 40, 50);
+
+    // cabeça
+    ctx.beginPath();
+    ctx.arc(p.x+20, p.y-60, 12, 0, Math.PI*2);
+    ctx.fill();
+
+    // detalhes por skin 👇
+    if(skinId === 'skin_ninja') {
+        ctx.fillStyle = "black";
+        ctx.fillRect(p.x+5, p.y-40, 30, 10); // máscara
+    }
+
+    if(skinId === 'skin_robot') {
+        ctx.strokeStyle = "#00fbff";
+        ctx.strokeRect(p.x, p.y-50, 40, 50);
+    }
+
+    if(skinId === 'skin_asahi') {
+        ctx.fillStyle = "orange";
+        ctx.fillRect(p.x+10, p.y-70, 20, 5); // cabelo
+    }
+    }
     ctx.fillStyle = 'blue'; ctx.fillRect(bot.x, bot.y-65, 45, 65);
     
     ctx.fillStyle = ITEMS.find(i => i.id === game.eq.ball).color;
@@ -239,7 +298,7 @@ const bH = (id, s) => {
 };
 bH('m-left', 'left'); bH('m-right', 'right');
 document.getElementById('m-jump').onclick = () => { if(p1.y>=360) p1.vy = -8.5; };
-document.getElementById('m-dive').onclick = () => { p1.dash = 22; };
+
 document.getElementById('p-use').onclick = () => {
     if(game.energy >= 100) {
         game.energy = 0;
@@ -249,6 +308,19 @@ document.getElementById('p-use').onclick = () => {
 };
 
 function updateUI() { document.getElementById('money-display').innerText = game.money; }
+    document.getElementById('m-dive').onclick = () => {
+
+    let style = game.eq.skill;
+
+    // normal dash
+    p1.dash = 22;
+
+    // 🛡️ NISHINOYA MODE
+    if(style === 'style_noya') {
+        p1.dash = 50; // mergulho maior
+        p1.y += 15; // desliza no chão
+    }
+};
 function setScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); if(id!=='none') document.getElementById(id).classList.add('active'); updateUI(); }
 
 updateUI();
