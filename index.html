@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vôlei Pro V2.0 - Gold Edition</title>
+    <title>Vôlei Pro V2.2 - Original</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --accent: #f1c40f; --ultra: #00fbff; --bg: #1a1a1a; }
@@ -19,17 +19,12 @@
         .item-card { background: #1e272e; border-radius: 10px; padding: 12px; text-align: center; border: 2px solid transparent; }
         .item-card.equipped { border-color: var(--accent); background: #2d3436; }
         .btn-main { background: var(--accent); color: black; border: none; padding: 14px; margin: 6px 0; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; display: block; }
-        
         #hud { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 50; }
         .hud-top { position: absolute; top: 15px; width: 100%; display: flex; justify-content: center; gap: 40px; font-weight: bold; font-size: 22px; }
         .btn-exit { position: absolute; top: 15px; right: 15px; background: #e74c3c; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-weight: bold; cursor: pointer; pointer-events: auto; z-index: 60; }
         .controls { position: absolute; bottom: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; pointer-events: auto; }
         .btn-act { width: 60px; height: 60px; background: rgba(0,0,0,0.6); border: 2px solid white; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         canvas { width: 100vw; height: 100vh; display: block; }
-
-        /* CHAT & WIN SCREEN */
-        .chat-controls { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 5px; pointer-events: auto; }
-        .btn-chat { background: rgba(0,0,0,0.7); color: white; border: 1px solid var(--accent); padding: 5px 10px; border-radius: 5px; font-size: 10px; cursor: pointer; }
         #win-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; }
         .win-text { font-size: 40px; color: var(--accent); text-shadow: 0 0 20px var(--accent); margin-bottom: 20px; }
     </style>
@@ -50,7 +45,7 @@
 <div id="screen-multi-choice" class="screen">
     <div class="menu-box">
         <h2 style="color:var(--ultra)">MODOS ONLINE</h2>
-        <button class="btn-main" onclick="startMode('multi-local')">2 PLAYERS (LOCAL)</button>
+        <button class="btn-main" onclick="startMode('multi-local')">MODO LOCAL (P2P)</button>
         <button class="btn-main" style="background:#2ecc71; color:white;" onclick="setScreen('screen-rooms')">SALAS PRIVADAS</button>
         <button class="btn-main" style="background:#95a5a6" onclick="setScreen('screen-lobby')">VOLTAR</button>
     </div>
@@ -60,8 +55,8 @@
     <div class="menu-box">
         <h2 style="color:var(--accent)">SALAS ONLINE</h2>
         <button class="btn-main" style="background:#e67e22; color:white" onclick="hostRoom()">CRIAR SALA</button>
-        <p id="room-code-display" style="font-family: monospace; font-size: 11px; color: var(--ultra); background: #1a1a1a; padding: 10px; border-radius: 5px; word-break: break-all;"></p>
-        <input type="text" id="room-input" style="width:80%; padding:10px; border-radius:8px; border:none; text-align:center; margin-bottom:10px" placeholder="COLE O CÓDIGO">
+        <p id="room-code-display" style="font-family: monospace; font-size: 11px; color: var(--ultra); background: #1a1a1a; padding: 10px; border-radius: 5px; word-break: break-all; min-height: 20px;"></p>
+        <input type="text" id="room-input" style="width:80%; padding:10px; border-radius:8px; border:none; text-align:center; margin-bottom:10px" placeholder="COLE O ID">
         <button class="btn-main" onclick="joinRoom()">ENTRAR</button>
         <button class="btn-main" style="background:#95a5a6; margin-top:10px" onclick="setScreen('screen-multi-choice')">VOLTAR</button>
     </div>
@@ -70,9 +65,9 @@
 <div id="screen-catalog" class="screen">
     <div class="catalog-container">
         <div class="tabs">
-            <button class="tab-btn active-tab" id="tab-arena" onclick="switchTab('arena')">ARENAS</button>
-            <button class="tab-btn" id="tab-ball" onclick="switchTab('ball')">BOLAS</button>
-            <button class="tab-btn" id="tab-skin" onclick="switchTab('skin')">SKINS</button>
+            <button id="tab-arena" class="tab-btn active-tab" onclick="switchTab('arena')">ARENAS</button>
+            <button id="tab-ball" class="tab-btn" onclick="switchTab('ball')">BOLAS</button>
+            <button id="tab-skin" class="tab-btn" onclick="switchTab('skin')">SKINS</button>
         </div>
         <div id="catalog-grid" class="item-grid"></div>
         <button class="btn-main" style="border-radius:0; height: 60px; background: #e74c3c; color: white;" onclick="setScreen('screen-lobby')">SAIR</button>
@@ -82,17 +77,10 @@
 <div id="screen-game" class="screen" style="padding:0">
     <button class="btn-exit" onclick="quitGame()">X</button>
     <canvas id="gameCanvas"></canvas>
-    <div id="status-net" style="position:absolute; bottom:80px; width:100%; text-align:center; font-size:10px; color:var(--ultra)"></div>
     <div id="hud">
         <div class="hud-top">
             <span style="color: #ff4757">P1: <span id="p1-score">0</span></span>
             <span style="color: #2e86de">P2: <span id="p2-score">0</span></span>
-        </div>
-        <div class="chat-controls" id="chat-btns" style="display:none">
-            <button class="btn-chat" onclick="sendChat('GG')">GG</button>
-            <button class="btn-chat" onclick="sendChat('LAG')">LAG</button>
-            <button class="btn-chat" onclick="sendChat('EZ')">EZ</button>
-            <button class="btn-chat" onclick="sendChat('THX')">THX</button>
         </div>
         <div class="controls">
             <div style="display: flex; gap: 10px;">
@@ -118,10 +106,8 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = 800; canvas.height = 400;
 
-// CONFIGURAÇÃO
 let peer = null, conn = null, isHost = false;
-let shake = 0, chatP1 = {msg:"", t:0}, chatP2 = {msg:"", t:0};
-let rematchVotes = {p1: false, p2: false};
+let shake = 0, rematchVotes = {p1: false, p2: false};
 let clientInputs = {left: false, right: false, jump: false, dive: false};
 let clientSkin = 'skin_default';
 
@@ -137,8 +123,8 @@ const ITEMS = [
 ];
 
 let game = {
-    money: parseInt(localStorage.getItem('v2_money')) || 500,
-    inv: JSON.parse(localStorage.getItem('v2_inv')) || ['arena_verde', 'ball_normal', 'skin_default'],
+    money: parseInt(localStorage.getItem('v19_money')) || 500,
+    inv: JSON.parse(localStorage.getItem('v19_inv')) || ['arena_verde', 'ball_normal', 'skin_default'],
     eq: { arena:'arena_verde', ball:'ball_normal', skin:'skin_default' },
     active: false, mode: 'friendly', scoreP1: 0, scoreP2: 0, lastWinner: 'p1', currentTab: 'arena'
 };
@@ -147,7 +133,7 @@ let ball = {x:400, y:120, vx:0, vy:0};
 let p1 = {x:100, y:360, vy:0, dash:0}, p2 = {x:650, y:360, vy:0, dash:0};
 let inputs = {left: false, right: false, jump: false, dive: false};
 
-// REDE
+// --- REDE ---
 function hostRoom() {
     peer = new Peer();
     peer.on('open', id => { document.getElementById('room-code-display').innerText = id; });
@@ -162,57 +148,13 @@ function joinRoom() {
 }
 
 function setupConn() {
-    conn.on('open', () => {
-        document.getElementById('status-net').innerText = "ONLINE";
-        document.getElementById('chat-btns').style.display = 'flex';
-        conn.send({type:'sync_init', eq: game.eq});
-    });
+    conn.on('open', () => { conn.send({type:'sync_init', eq: game.eq}); });
     conn.on('data', data => {
-        if(data.type === 'chat') showChat(isHost ? 'p2' : 'p1', data.msg);
-        else if(data.type === 'sync_init') { game.eq = data.eq; clientSkin = data.eq.skin; }
+        if(data.type === 'sync_init') { clientSkin = data.eq.skin; }
         else if(data.type === 'rematch_vote') { rematchVotes[data.role] = true; checkRematch(); }
         else if(isHost) clientInputs = data;
         else { ball = data.ball; p1 = data.p1; p2 = data.p2; game.scoreP1 = data.scoreP1; game.scoreP2 = data.scoreP2; }
     });
-}
-
-function sendChat(msg) {
-    if(conn) { conn.send({type:'chat', msg}); showChat(isHost ? 'p1' : 'p2', msg); }
-}
-function showChat(p, m) { if(p==='p1'){chatP1={msg:m, t:90}} else {chatP2={msg:m, t:90}} }
-
-function requestRematch() {
-    if(game.mode !== 'multi-online') { resetMatch(); return; }
-    const role = isHost ? 'p1' : 'p2';
-    rematchVotes[role] = true;
-    conn.send({type:'rematch_vote', role});
-    checkRematch();
-}
-
-function checkRematch() {
-    let count = (rematchVotes.p1?1:0) + (rematchVotes.p2?1:0);
-    document.getElementById('btn-revanche').innerText = `REVANCHE (${count}/2)`;
-    if(rematchVotes.p1 && rematchVotes.p2) resetMatch();
-}
-
-function resetMatch() {
-    game.scoreP1 = 0; game.scoreP2 = 0;
-    game.active = true;
-    rematchVotes = {p1:false, p2:false};
-    document.getElementById('win-screen').style.display = 'none';
-    spawnBall();
-}
-
-function quitGame() {
-    game.active = false;
-    if(conn) conn.close();
-    setScreen('screen-lobby');
-    document.getElementById('win-screen').style.display = 'none';
-}
-
-function spawnBall() {
-    if(!isHost && game.mode === 'multi-online') return;
-    ball = {x: game.lastWinner==='p1'?p1.x+22 : p2.x+22, y:120, vx:0, vy:0};
 }
 
 function startMode(m) {
@@ -230,23 +172,7 @@ function updatePhys(p, inp, side) {
     if(inp.dive && p.dash <= 0) p.dash = 20;
     p.vy += 0.35; p.y += p.vy;
     if(p.y >= 360) { p.y = 360; p.vy = 0; }
-    if(side==='l') p.x = Math.max(0, Math.min(355, p.x));
-    else p.x = Math.max(405, Math.min(755, p.x));
-}
-
-function drawPlayer(p, skId, isP2) {
-    const sk = ITEMS.find(i=>i.id===skId) || ITEMS[5];
-    ctx.save();
-    ctx.translate(p.x, p.y-65);
-    ctx.fillStyle = isP2 ? 'blue' : sk.color;
-    ctx.fillRect(0,0,45,65);
-    // Olhos
-    ctx.fillStyle = "white";
-    ctx.fillRect(isP2?5:30, 15, 10, 10);
-    ctx.fillStyle = "black";
-    let lookX = (ball.x - p.x) * 0.01;
-    ctx.fillRect(isP2?5+lookX:30+lookX, 18, 5, 5);
-    ctx.restore();
+    p.x = (side==='l') ? Math.max(0, Math.min(355, p.x)) : Math.max(405, Math.min(755, p.x));
 }
 
 function loop() {
@@ -256,8 +182,9 @@ function loop() {
             if(game.mode==='friendly') {
                 let bi = {left: ball.x>360 && p2.x>ball.x, right: ball.x>360 && p2.x<ball.x, jump: ball.y<250 && Math.abs(ball.x-p2.x)<50};
                 updatePhys(p2, bi, 'r');
-            } else if(game.mode==='multi-online') updatePhys(p2, clientInputs, 'r');
-
+            } else {
+                updatePhys(p2, clientInputs, 'r');
+            }
             ball.vy += 0.22; ball.x += ball.vx; ball.y += ball.vy;
             if(ball.x<10 || ball.x>790) ball.vx *= -1;
             [p1, p2].forEach(p => {
@@ -276,7 +203,7 @@ function loop() {
                     document.getElementById('winner-label').innerText = game.scoreP1>=10?"P1 VENCEU!":"P2 VENCEU!";
                 } else spawnBall();
             }
-            if(conn && game.mode==='multi-online') conn.send({ball, p1, p2, scoreP1:game.scoreP1, scoreP2:game.scoreP2});
+            if(conn && isHost) conn.send({ball, p1, p2, scoreP1:game.scoreP1, scoreP2:game.scoreP2});
         } else if(conn) conn.send(inputs);
 
         // DRAW
@@ -287,16 +214,14 @@ function loop() {
         ctx.fillStyle = '#d4a373'; ctx.fillRect(0,360,800,40);
         ctx.fillStyle = 'white'; ctx.fillRect(398,280,4,80);
         
-        drawPlayer(p1, game.eq.skin, false);
-        drawPlayer(p2, clientSkin, true);
+        // Players
+        ctx.fillStyle = ITEMS.find(i=>i.id===game.eq.skin).color;
+        ctx.fillRect(p1.x, p1.y-65, 45, 65);
+        ctx.fillStyle = (game.mode==='multi-online'||game.mode==='multi-local') ? ITEMS.find(i=>i.id===clientSkin).color : 'blue';
+        ctx.fillRect(p2.x, p2.y-65, 45, 65);
 
         ctx.fillStyle = ITEMS.find(i=>i.id===game.eq.ball).color;
         ctx.beginPath(); ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2); ctx.fill();
-        
-        // Chat Draw
-        ctx.fillStyle = "white"; ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
-        if(chatP1.t>0) { ctx.fillText(chatP1.msg, p1.x+22, p1.y-80); chatP1.t--; }
-        if(chatP2.t>0) { ctx.fillText(chatP2.msg, p2.x+22, p2.y-80); chatP2.t--; }
         ctx.restore();
         
         document.getElementById('p1-score').innerText = game.scoreP1;
@@ -306,32 +231,44 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// UI & CATALOG
+// --- UI & CATALOG ---
 function setScreen(id) { 
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     document.getElementById('money-display').innerText = game.money;
 }
 function openCatalog() { setScreen('screen-catalog'); renderCatalog(); }
-function switchTab(t) { game.currentTab = t; renderCatalog(); }
+function switchTab(t) { 
+    game.currentTab = t; 
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+    document.getElementById('tab-'+t).classList.add('active-tab');
+    renderCatalog(); 
+}
 function renderCatalog() {
     const grid = document.getElementById('catalog-grid'); grid.innerHTML = '';
     ITEMS.filter(i => i.type === game.currentTab).forEach(item => {
         const owned = game.inv.includes(item.id); const eq = game.eq[item.type] === item.id;
         grid.innerHTML += `<div class="item-card ${eq?'equipped':''}">
             <div style="font-size:30px">${item.icon}</div>
+            <div style="font-size:10px; margin:5px 0">${item.name}</div>
             <button class="btn-main" style="font-size:10px" ${!owned?'disabled':''} onclick="equip('${item.type}','${item.id}')">
-            ${eq?'EQUIPADO':(owned?'USAR':'$150')}</button></div>`;
+            ${eq?'EQUIPADO':(owned?'USAR':'BLOQUEADO')}</button></div>`;
     });
 }
-function equip(t, id) { game.eq[t] = id; renderCatalog(); }
+function equip(t, id) { game.eq[t] = id; renderCatalog(); localStorage.setItem('v19_eq', JSON.stringify(game.eq)); }
 function pullGacha() {
     if(game.money<150) return alert("Sem moedas!");
     game.money-=150; let pool = ITEMS.filter(i=>!game.inv.includes(i.id));
     if(pool.length>0) { let it = pool[Math.floor(Math.random()*pool.length)]; game.inv.push(it.id); alert("Ganhou: "+it.name); }
-    localStorage.setItem('v2_money', game.money); localStorage.setItem('v2_inv', JSON.stringify(game.inv));
+    localStorage.setItem('v19_money', game.money); localStorage.setItem('v19_inv', JSON.stringify(game.inv));
     document.getElementById('money-display').innerText = game.money;
 }
+
+function spawnBall() { ball = {x: game.lastWinner==='p1'?p1.x+22 : p2.x+22, y:120, vx:0, vy:0}; }
+function quitGame() { game.active = false; if(conn) conn.close(); setScreen('screen-lobby'); document.getElementById('win-screen').style.display='none'; }
+function requestRematch() { if(game.mode==='friendly') { resetMatch(); return; } rematchVotes[isHost?'p1':'p2']=true; if(conn) conn.send({type:'rematch_vote', role:isHost?'p1':'p2'}); checkRematch(); }
+function checkRematch() { let c=(rematchVotes.p1?1:0)+(rematchVotes.p2?1:0); document.getElementById('btn-revanche').innerText=`REVANCHE (${c}/2)`; if(rematchVotes.p1&&rematchVotes.p2) resetMatch(); }
+function resetMatch() { game.scoreP1=0; game.scoreP2=0; game.active=true; rematchVotes={p1:false,p2:false}; document.getElementById('win-screen').style.display='none'; spawnBall(); }
 
 const bH = (id, s) => { 
     const e = document.getElementById(id); 
@@ -345,5 +282,7 @@ document.getElementById('m-dive').onpointerdown = () => inputs.dive = true;
 setScreen('screen-lobby'); loop();
 </script>
 </body>
-    </html>
+</html>
+
+    
             
