@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vôlei Pro V2.2 - Original</title>
+    <title>Vôlei Pro V2.2 - Anti-Lag Edition</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --accent: #f1c40f; --ultra: #00fbff; --bg: #1a1a1a; }
@@ -110,6 +110,7 @@ let peer = null, conn = null, isHost = false;
 let shake = 0, rematchVotes = {p1: false, p2: false};
 let clientInputs = {left: false, right: false, jump: false, dive: false};
 let clientSkin = 'skin_default';
+let netInterval = null; // Timer para rede
 
 const ITEMS = [
     {id:'arena_verde', name:'Gramado', type:'arena', icon:'🌵', color: '#2ecc71'},
@@ -133,7 +134,7 @@ let ball = {x:400, y:120, vx:0, vy:0};
 let p1 = {x:100, y:360, vy:0, dash:0}, p2 = {x:650, y:360, vy:0, dash:0};
 let inputs = {left: false, right: false, jump: false, dive: false};
 
-// --- REDE ---
+// --- REDE (MELHORADO) ---
 function hostRoom() {
     peer = new Peer();
     peer.on('open', id => { document.getElementById('room-code-display').innerText = id; });
@@ -148,13 +149,34 @@ function joinRoom() {
 }
 
 function setupConn() {
-    conn.on('open', () => { conn.send({type:'sync_init', eq: game.eq}); });
+    conn.on('open', () => { 
+        conn.send({type:'sync_init', eq: game.eq}); 
+        // Inicia o loop de rede estável (20ms)
+        if(netInterval) clearInterval(netInterval);
+        netInterval = setInterval(networkUpdate, 40); 
+    });
+    
     conn.on('data', data => {
         if(data.type === 'sync_init') { clientSkin = data.eq.skin; }
         else if(data.type === 'rematch_vote') { rematchVotes[data.role] = true; checkRematch(); }
-        else if(isHost) clientInputs = data;
-        else { ball = data.ball; p1 = data.p1; p2 = data.p2; game.scoreP1 = data.scoreP1; game.scoreP2 = data.scoreP2; }
+        else if(isHost) {
+            clientInputs = data; // Host recebe as teclas do Client
+        } else { 
+            // Client recebe posições do Host
+            ball = data.ball; p1 = data.p1; p2 = data.p2; 
+            game.scoreP1 = data.scoreP1; game.scoreP2 = data.scoreP2; 
+        }
     });
+}
+
+// Função que roda fora do requestAnimationFrame para não travar em abas ocultas
+function networkUpdate() {
+    if(!conn || !conn.open) return;
+    if(isHost) {
+        conn.send({ball, p1, p2, scoreP1:game.scoreP1, scoreP2:game.scoreP2});
+    } else {
+        conn.send(inputs);
+    }
 }
 
 function startMode(m) {
@@ -168,8 +190,8 @@ function updatePhys(p, inp, side) {
     let s = p.dash > 0 ? 11 : 5;
     if(p.dash > 0) p.dash--;
     if(inp.left) p.x -= s; if(inp.right) p.x += s;
-    if(inp.jump && p.y >= 360) p.vy = -10;
-    if(inp.dive && p.dash <= 0) p.dash = 20;
+    if(inp.jump && p.y >= 360) { p.vy = -10; inp.jump = false; } // Reset jump after use
+    if(inp.dive && p.dash <= 0) { p.dash = 20; inp.dive = false; } // Reset dive after use
     p.vy += 0.35; p.y += p.vy;
     if(p.y >= 360) { p.y = 360; p.vy = 0; }
     p.x = (side==='l') ? Math.max(0, Math.min(355, p.x)) : Math.max(405, Math.min(755, p.x));
@@ -177,6 +199,7 @@ function updatePhys(p, inp, side) {
 
 function loop() {
     if(game.active) {
+        // Apenas o Host processa a física no modo Online
         if(isHost || game.mode !== 'multi-online') {
             updatePhys(p1, inputs, 'l');
             if(game.mode==='friendly') {
@@ -203,10 +226,9 @@ function loop() {
                     document.getElementById('winner-label').innerText = game.scoreP1>=10?"P1 VENCEU!":"P2 VENCEU!";
                 } else spawnBall();
             }
-            if(conn && isHost) conn.send({ball, p1, p2, scoreP1:game.scoreP1, scoreP2:game.scoreP2});
-        } else if(conn) conn.send(inputs);
+        }
 
-        // DRAW
+        // --- RENDERIZAÇÃO ---
         ctx.save();
         if(shake>0) { ctx.translate(Math.random()*shake, Math.random()*shake); shake *= 0.8; }
         let ar = ITEMS.find(i=>i.id===game.eq.arena);
@@ -214,19 +236,21 @@ function loop() {
         ctx.fillStyle = '#d4a373'; ctx.fillRect(0,360,800,40);
         ctx.fillStyle = 'white'; ctx.fillRect(398,280,4,80);
         
-        // Players
+        // Player 1
         ctx.fillStyle = ITEMS.find(i=>i.id===game.eq.skin).color;
         ctx.fillRect(p1.x, p1.y-65, 45, 65);
-        ctx.fillStyle = (game.mode==='multi-online'||game.mode==='multi-local') ? ITEMS.find(i=>i.id===clientSkin).color : 'blue';
+        
+        // Player 2
+        ctx.fillStyle = (game.mode.includes('multi')) ? ITEMS.find(i=>i.id===clientSkin).color : 'blue';
         ctx.fillRect(p2.x, p2.y-65, 45, 65);
 
+        // Bola
         ctx.fillStyle = ITEMS.find(i=>i.id===game.eq.ball).color;
         ctx.beginPath(); ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2); ctx.fill();
         ctx.restore();
         
         document.getElementById('p1-score').innerText = game.scoreP1;
         document.getElementById('p2-score').innerText = game.scoreP2;
-        inputs.jump = false; inputs.dive = false;
     }
     requestAnimationFrame(loop);
 }
@@ -265,24 +289,32 @@ function pullGacha() {
 }
 
 function spawnBall() { ball = {x: game.lastWinner==='p1'?p1.x+22 : p2.x+22, y:120, vx:0, vy:0}; }
-function quitGame() { game.active = false; if(conn) conn.close(); setScreen('screen-lobby'); document.getElementById('win-screen').style.display='none'; }
+function quitGame() { 
+    game.active = false; 
+    if(conn) conn.close(); 
+    if(netInterval) clearInterval(netInterval);
+    setScreen('screen-lobby'); 
+    document.getElementById('win-screen').style.display='none'; 
+}
 function requestRematch() { if(game.mode==='friendly') { resetMatch(); return; } rematchVotes[isHost?'p1':'p2']=true; if(conn) conn.send({type:'rematch_vote', role:isHost?'p1':'p2'}); checkRematch(); }
 function checkRematch() { let c=(rematchVotes.p1?1:0)+(rematchVotes.p2?1:0); document.getElementById('btn-revanche').innerText=`REVANCHE (${c}/2)`; if(rematchVotes.p1&&rematchVotes.p2) resetMatch(); }
 function resetMatch() { game.scoreP1=0; game.scoreP2=0; game.active=true; rematchVotes={p1:false,p2:false}; document.getElementById('win-screen').style.display='none'; spawnBall(); }
 
+// Controles corrigidos para não resetar o estado prematuramente
 const bH = (id, s) => { 
     const e = document.getElementById(id); 
     e.onpointerdown = (ev) => { ev.preventDefault(); inputs[s] = true; };
-    e.onpointerup = () => inputs[s] = false;
+    e.onpointerup = (ev) => { ev.preventDefault(); inputs[s] = false; };
 };
 bH('m-left', 'left'); bH('m-right', 'right');
-document.getElementById('m-jump').onpointerdown = () => inputs.jump = true;
-document.getElementById('m-dive').onpointerdown = () => inputs.dive = true;
+document.getElementById('m-jump').onpointerdown = (ev) => { ev.preventDefault(); inputs.jump = true; };
+document.getElementById('m-dive').onpointerdown = (ev) => { ev.preventDefault(); inputs.dive = true; };
 
 setScreen('screen-lobby'); loop();
 </script>
 </body>
 </html>
+
 
     
             
