@@ -3,11 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vôlei Pro V2.3 - Valentines & Codes</title>
+    <title>Vôlei Pro V2.4 - Fixed Edition</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --accent: #f1c40f; --ultra: #00fbff; --bg: #1a1a1a; --love: #ff6b81; --gold: #ffd700; }
-        body { margin: 0; background: #000; font-family: 'Segoe UI', sans-serif; color: white; overflow: hidden; touch-action: none; height: 100vh; }
+        :root { --accent: #f1c40f; --ultra: #00fbff; --bg: #1a1a1a; --love: #ff6b81; --gold: #ffd700; --vamp: #8b0000; }
+        
+        /* FIX: Bloqueio total de seleção e menus do navegador */
+        * { 
+            -webkit-user-select: none; 
+            user-select: none; 
+            -webkit-touch-callout: none; 
+            touch-action: none; 
+        }
+
+        body { margin: 0; background: #000; font-family: 'Segoe UI', sans-serif; color: white; overflow: hidden; height: 100vh; }
         .screen { display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 100; padding: 20px; box-sizing: border-box; }
         .active { display: flex; }
         .menu-box { background: #2c3e50; padding: 25px; border-radius: 20px; border: 3px solid var(--accent); width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -36,7 +45,7 @@
         <p style="margin-top:0; font-size: 1.2em;">💰 <span id="money-display">0</span></p>
         <button class="btn-main" onclick="startMode('friendly')">TREINAMENTO</button>
         <button class="btn-main" style="background:#8e44ad; color:white;" onclick="setScreen('screen-multi-choice')">MULTIPLAYER</button>
-        <button class="btn-main" style="background:#fff" onclick="openCatalog()">MEU CATÁLOGO</button>
+        <button class="btn-main" style="background:#fff" onclick="openCatalog()">MEU CATÁLOGO</button>bbbhvvvvvfcf
         <button class="btn-main" style="background:var(--ultra)" onclick="pullGacha()">ABRIR BAÚ ($150)</button>
         <button class="btn-main" style="background:#2ecc71; color:white; font-size: 10px;" onclick="promptCode()">INSERIR CÓDIGO</button>
     </div>
@@ -103,169 +112,212 @@
 </div>
 
 <script>
+  let buildingHeights = Array.from({length: 10}, () => 100 + Math.random() * 150);
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = 800; canvas.height = 400;
 
-// Lógica de Evento
 const now = new Date();
-const isValentines = (now.getMonth() === 1 && now.getDate() >= 12 && now.getDate() <= 28);
+const isValentines = (now.getMonth() === 1); 
 
-// Itens do Jogo
+// --- DATABASE DE ITENS (Limpa e Funcional) ---
 const ITEMS = [
     {id:'arena_verde', name:'Gramado', type:'arena', icon:'🌵', color: '#2ecc71', gacha: false},
     {id:'arena_noite', name:'Noite', type:'arena', icon:'🌑', color: '#1a1a2e', gacha: true},
-    {id:'arena_tarde', name:'Tarde', type:'arena', icon:'🌅', color: '#e67e22', gacha: true}, // GACHA
+    {id:'arena_tarde', name:'Tarde', type:'arena', icon:'🌅', color: '#e67e22', gacha: true},
+    {id:'arena_praia', name:'praia', type:'arena', icon:'️⛱️', color: '#87CEEB', gacha: true},
+    {id:'arena_mansao', name:'Mansão', type:'arena', icon:'🏰', color: '#2c3e50', gacha: true},
     {id:'ball_normal', name:'Comum', type:'ball', icon:'🏐', color: 'white', gacha: false},
-    {id:'ball_crystal', name:'Cristal', type:'ball', icon:'💎', color: '#00fbff', gacha: true},
+     {id:'ball_crystal', name:'Cristal', type:'ball', icon:'💎', color: '#00fbff', gacha: true},
+      {id:'ball_blood', name:'sangue', type:'ball', icon:'🩸', color: '#FF002E', gacha: true},
     {id:'skin_default', name:'Padrão', type:'skin', icon:'👤', color:'red', gacha: false},
+    {id:'skin_blood', name:'Vampiro', type:'skin', icon:'🧛🏽', color: '#1a1a1a', gacha: true},
     {id:'skin_ninja', name:'Ninja', type:'skin', icon:'🥷', color:'#2c3e50', gacha: true},
-    {id:'skin_robot', name:'Robô', type:'skin', icon:'🤖', color:'#95a5a6', gacha: true} // GACHA
+        {id:'skin_robot', name:'Robô', type:'skin', icon:'🤖', color:'#95a5a6', gacha: true},
+    {id:'skin_king', name:'O Rei', type:'skin', icon:'👑', color:'#FFE02E', gacha: false},
 ];
 
 if(isValentines) {
     ITEMS.push(
         {id:'skin_love', name:'Cupido', type:'skin', icon:'💘', color:'#ff748c', event: true, gacha: true},
-        {id:'ball_love', name:'Paixão', type:'ball', icon:'💝', color:'white', event: true, gacha: true}
+        {id:'ball_love', name:'Paixão', type:'ball', icon:'💝', color:'pink', event: true, gacha: true},
+        {id:'arena_love', name:'Jardim', type:'arena', icon:'💖', color:'#ff6b81', event: true, gacha: true}
     );
-    document.getElementById('title-main').innerText = "VÔLEI PRO ❤️";
 }
 
 let game = {
-    money: parseInt(localStorage.getItem('v19_money')) || 500,
-    inv: JSON.parse(localStorage.getItem('v19_inv')) || ['arena_verde', 'ball_normal', 'skin_default'],
-    eq: JSON.parse(localStorage.getItem('v19_eq')) || { arena:'arena_verde', ball:'ball_normal', skin:'skin_default' },
-    usedCodes: JSON.parse(localStorage.getItem('v19_codes')) || [],
-    active: false, mode: 'friendly', scoreP1: 0, scoreP2: 0
+    money: parseInt(localStorage.getItem('v24_money')) || 500,
+    inv: JSON.parse(localStorage.getItem('v24_inv')) || ['arena_verde', 'ball_normal', 'skin_default'],
+    eq: JSON.parse(localStorage.getItem('v24_eq')) || { arena:'arena_verde', ball:'ball_normal', skin:'skin_default' },
+    usedCodes: JSON.parse(localStorage.getItem('v24_codes')) || [],
+    active: false, mode: 'friendly', scoreP1: 0, scoreP2: 0, currentTab: 'arena'
 };
 
-// --- SISTEMA DE CÓDIGOS ---
-function promptCode() {
-    const code = prompt("Digite o código da atualização:").toUpperCase();
-    if(!code) return;
+// --- FIX: RENDERIZADO COM CONTORNO (Não camufla mais) ---
+function drawPlayer(p, skinId) {
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 3;
 
-    if(game.usedCodes.includes(code)) return alert("Código já utilizado!");
-
-    // Códigos válidos apenas DURANTE o evento de Valentines (Fevereiro)
-    if(isValentines) {
-        if(code === "LOVE2026") {
-            addMoney(1000);
-            saveCode(code);
-            return alert("❤️ AMOR RECEBIDO! Você ganhou $1000 moedas!");
-        }
-        if(code === "CUPIDO") {
-            unlockItem('skin_love');
-            saveCode(code);
-            return alert("🏹 Skin Cupido Desbloqueada!");
-        }
+    if(skinId === 'skin_blood') {
+        ctx.fillStyle = "#1a1a1a"; 
+        ctx.fillRect(p.x, p.y - 45, 45, 45); 
+        ctx.strokeRect(p.x, p.y - 45, 45, 45);
+        ctx.fillStyle = "#f5f5dc"; 
+        ctx.fillRect(p.x, p.y - 65, 45, 20); 
+        ctx.strokeRect(p.x, p.y - 65, 45, 20);
     } else {
-        // Códigos que expiraram
-        if(code === "LOVE2026" || code === "CUPIDO") {
-            return alert("Este código expirou na atualização de Dia dos Namorados!");
-        }
+        ctx.fillStyle = ITEMS.find(i=>i.id===skinId)?.color || 'red';
+        ctx.fillRect(p.x, p.y-65, 45, 65);
+        ctx.strokeRect(p.x, p.y-65, 45, 65);
     }
 
-    alert("Código inválido ou expirado!");
-}
-
-function saveCode(code) {
-    game.usedCodes.push(code);
-    localStorage.setItem('v19_codes', JSON.stringify(game.usedCodes));
-}
-
-function unlockItem(id) {
-    if(!game.inv.includes(id)) {
-        game.inv.push(id);
-        localStorage.setItem('v19_inv', JSON.stringify(game.inv));
+    
+    if(skinId === 'skin_love') {
+        ctx.fillStyle = "white";
+        ctx.fillRect(p.x + 10, p.y - 75, 25, 10);
+        ctx.strokeRect(p.x + 10, p.y - 75, 25, 10);
     }
+   if(skinId === 'skin_king') {
+    ctx.font = "20px serif";
+    ctx.fillText("👑", p.x + 10, p.y - 70); // Desenha o emoji acima da cabeça
 }
 
-function addMoney(val) {
-    game.money += val;
-    localStorage.setItem('v19_money', game.money);
-    document.getElementById('money-display').innerText = game.money;
 }
 
-// --- GACHA ATUALIZADO ---
+function drawArena() {
+    let ar = ITEMS.find(i=>i.id===game.eq.arena);
+    ctx.fillStyle = ar.color;
+    ctx.fillRect(0,0,800,400);
+    
+    if(ar.id === 'arena_mansao') {
+        ctx.fillStyle = "#34495e";
+        for(let i=0; i<5; i++) ctx.fillRect(100 + (i*150), 50, 60, 150);
+    } else if(ar.id === 'arena_love') {
+        ctx.fillStyle = "white";
+        for(let i=0; i<10; i++) ctx.beginPath(), ctx.arc(i*100, 360, 40, 0, Math.PI*2), ctx.fill();
+    }
+    if(ar.id === 'arena_tarde') {
+    // Céu com gradiente (Laranja para Roxo/Azul)
+    let skyGrad = ctx.createLinearGradient(0, 0, 0, 360);
+    skyGrad.addColorStop(0, "#2c3e50"); // Topo escuro
+    skyGrad.addColorStop(0.6, "#e67e22"); // Meio laranja
+    skyGrad.addColorStop(1, "#f1c40f");   // Horizonte amarelo
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, 800, 360);
+
+    // Sol (Círculo com brilho)
+    ctx.fillStyle = "#ff7e5f";
+    ctx.beginPath();
+    ctx.arc(600, 150, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Prédios (Silhuetas ao fundo)
+    ctx.fillStyle = "rgba(44, 62, 80, 0.5)"; // Prédios distantes e levemente transparentes
+    // Dentro do if(ar.id === 'arena_tarde')
+for(let i=0; i < buildingHeights.length; i++) {
+    let h = buildingHeights[i]; // Agora ele usa o valor fixo
+    ctx.fillRect(i * 90, 360 - h, 60, h);
+}
+
+    
+    // O chão vira asfalto
+    ctx.fillStyle = "#34495e"; 
+    ctx.fillRect(0, 360, 800, 40);
+}
+if(ar.id === 'arena_praia') {
+    // Céu azul suave
+    ctx.fillStyle = "#87CEEB";
+    ctx.fillRect(0, 0, 800, 360);
+
+    // Mar ao fundo
+    let seaGrad = ctx.createLinearGradient(0, 200, 0, 360);
+    seaGrad.addColorStop(0, "#1e3799");
+    seaGrad.addColorStop(1, "#4a69bd");
+    ctx.fillStyle = seaGrad;
+    ctx.fillRect(0, 200, 800, 160);
+
+    // Areia
+    ctx.fillStyle = "#f7d794";
+    ctx.fillRect(0, 340, 800, 60);
+
+    // Sol brilhante
+    ctx.fillStyle = "#fff200";
+    ctx.beginPath();
+    ctx.arc(100, 80, 30, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+
+    
+    ctx.fillStyle = '#d4a373'; 
+    ctx.fillRect(0,360,800,40);
+    ctx.fillStyle = 'white';
+    ctx.fillRect(398,280,4,80);
+}
+
+function promptCode() {
+    const code = prompt("Digite o código:").toUpperCase();
+    if(!code || game.usedCodes.includes(code)) return;
+    if(code === "LOVE2026") { addMoney(1000); saveCode(code); }
+    else if(code === "CUPIDO") { unlockItem('skin_love'); saveCode(code); }
+    else if(code === "KING") { unlockItem('skin_king'); saveCode(code); }
+}
+
+function saveCode(code) { game.usedCodes.push(code); localStorage.setItem('v24_codes', JSON.stringify(game.usedCodes)); }
+function unlockItem(id) { if(!game.inv.includes(id)) { game.inv.push(id); localStorage.setItem('v24_inv', JSON.stringify(game.inv)); } }
+function addMoney(val) { game.money += val; localStorage.setItem('v24_money', game.money); updateUI(); }
+function updateUI() { document.getElementById('money-display').innerText = game.money; }
+
 function pullGacha() {
     if(game.money < 150) return alert("Sem moedas!");
-    
-    // Filtra itens que podem sair no gacha e que o jogador ainda não tem
     let pool = ITEMS.filter(i => i.gacha && !game.inv.includes(i.id));
-    
-    // Se não for Valentine's, remove os itens de evento da roleta
-    if(!isValentines) {
-        pool = pool.filter(i => !i.event);
-    }
-
-    if(pool.length === 0) return alert("Você já tem todos os itens disponíveis no momento!");
-
+    if(pool.length === 0) return alert("Você já tem tudo!");
     game.money -= 150;
     let reward = pool[Math.floor(Math.random() * pool.length)];
     game.inv.push(reward.id);
-    
-    localStorage.setItem('v19_money', game.money);
-    localStorage.setItem('v19_inv', JSON.stringify(game.inv));
-    document.getElementById('money-display').innerText = game.money;
-    alert(`✨ BAÚ ABERTO!\nVocê ganhou: ${reward.name} ${reward.icon}`);
+    localStorage.setItem('v24_money', game.money);
+    localStorage.setItem('v24_inv', JSON.stringify(game.inv));
+    updateUI();
+    alert(`Ganhou: ${reward.name}`);
 }
 
-// --- RESTANTE DA LOGICA DE JOGO (Física, Render, Rede) ---
 let ball = {x:400, y:120, vx:0, vy:0};
 let p1 = {x:100, y:360, vy:0, dash:0}, p2 = {x:650, y:360, vy:0, dash:0};
 let inputs = {left: false, right: false, jump: false, dive: false};
-let peer = null, conn = null, isHost = false, netInterval = null, clientInputs = {left: false, right: false, jump: false, dive: false}, clientSkin = 'skin_default', rematchVotes = {p1: false, p2: false};
-
-function drawPlayer(p, skinId) {
-    ctx.fillStyle = ITEMS.find(i=>i.id===skinId)?.color || 'red';
-    ctx.fillRect(p.x, p.y-65, 45, 65);
-    if(skinId === 'skin_love') {
-        ctx.strokeStyle = "white"; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(p.x - 5, p.y - 40); ctx.lineTo(p.x + 50, p.y - 25); ctx.stroke();
-        ctx.fillStyle = "red"; ctx.font = "15px Arial"; ctx.fillText("❤️", p.x + 40, p.y - 20);
-    }
-    if(skinId === 'skin_robot') {
-        ctx.fillStyle = "cyan"; ctx.fillRect(p.x+10, p.y-55, 25, 10); // "Visor" do robô
-    }
-}
-
-function drawBall() {
-    let ballData = ITEMS.find(i=>i.id===game.eq.ball);
-    ctx.fillStyle = ballData.color;
-    ctx.beginPath(); ctx.arc(ball.x, ball.y, 12, 0, Math.PI*2); ctx.fill();
-    if(game.eq.ball === 'ball_love') {
-        ctx.strokeStyle = "#ff4757"; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(ball.x - 12, ball.y); ctx.lineTo(ball.x + 12, ball.y); ctx.stroke();
-    }
-}
-
-function awardMoney(winner) {
-    if(winner === 'p1') {
-        let amount = game.eq.skin === 'skin_love' ? 75 : 50;
-        addMoney(amount);
-        document.getElementById('money-gain-text').innerText = `+ $${amount} MOEDAS`;
-        document.getElementById('money-gain-text').style.display = 'block';
-    } else { document.getElementById('money-gain-text').style.display = 'none'; }
-}
 
 function spawnBall() { ball = {x: game.scoreP1 > game.scoreP2 ? p2.x+22 : p1.x+22, y:120, vx:0, vy:0}; }
-function setScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.getElementById('money-display').innerText = game.money; }
+function setScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); updateUI(); }
 function openCatalog() { setScreen('screen-catalog'); renderCatalog(); }
-function switchTab(t) { game.currentTab = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab')); document.getElementById('tab-'+t).classList.add('active-tab'); renderCatalog(); }
+
+function switchTab(t) { 
+    game.currentTab = t; 
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab')); 
+    document.getElementById('tab-'+t).classList.add('active-tab'); 
+    renderCatalog(); 
+}
+
 function renderCatalog() {
     const grid = document.getElementById('catalog-grid'); grid.innerHTML = '';
     ITEMS.filter(i => i.type === game.currentTab).forEach(item => {
         const owned = game.inv.includes(item.id); const eq = game.eq[item.type] === item.id;
         grid.innerHTML += `<div class="item-card ${eq?'equipped':''}">
-            ${item.event ? '<span class="event-badge">RARO</span>' : ''}
+            ${item.event ? '<span class="event-badge">❤️</span>' : ''}
             <div style="font-size:30px">${item.icon}</div>
             <div style="font-size:10px; margin:5px 0">${item.name}</div>
             <button class="btn-main" style="font-size:10px" ${!owned?'disabled':''} onclick="equip('${item.type}','${item.id}')">
             ${eq?'EQUIPADO':(owned?'USAR':'BLOQUEADO')}</button></div>`;
     });
 }
-function equip(t, id) { game.eq[t] = id; renderCatalog(); localStorage.setItem('v19_eq', JSON.stringify(game.eq)); }
-function startMode(m) { game.mode = m; game.scoreP1 = 0; game.scoreP2 = 0; setScreen('screen-game'); document.getElementById('hud').style.display = 'block'; game.active = true; spawnBall(); }
+
+function equip(t, id) { game.eq[t] = id; renderCatalog(); localStorage.setItem('v24_eq', JSON.stringify(game.eq)); }
+
+function startMode(m) { 
+    game.mode = m; game.scoreP1 = 0; game.scoreP2 = 0; 
+    setScreen('screen-game'); document.getElementById('hud').style.display = 'block'; 
+    game.active = true; spawnBall(); 
+}
+
 function quitGame() { game.active = false; setScreen('screen-lobby'); document.getElementById('win-screen').style.display='none'; }
 
 function updatePhys(p, inp, side) {
@@ -286,30 +338,51 @@ function loop() {
         }
         ball.vy += 0.22; ball.x += ball.vx; ball.y += ball.vy;
         if(ball.x<10 || ball.x>790) ball.vx *= -1;
-        [p1, p2].forEach(p => { if(ball.x > p.x && ball.x < p.x+45 && ball.y+10 > p.y-65 && ball.y-10 < p.y) { ball.vy = -9; ball.vx = (ball.x - (p.x+22)) * 0.45; } });
+        
+        [p1, p2].forEach(p => { 
+            if(ball.x > p.x && ball.x < p.x+45 && ball.y+10 > p.y-65 && ball.y-10 < p.y) { 
+                ball.vy = -9.5; ball.vx = (ball.x - (p.x+22)) * 0.45; 
+                ball.y = p.y - 70;
+            } 
+        });
+
         if(ball.x>395 && ball.x<405 && ball.y>280) { ball.vx *= -1.2; ball.x = ball.x<400?385:415; }
+        
         if(ball.y > 395) { 
             if(ball.x < 400) game.scoreP2++; else game.scoreP1++;
-            if(game.scoreP1>=10 || game.scoreP2>=10) { game.active = false; document.getElementById('win-screen').style.display='flex'; awardMoney(game.scoreP1>=10?'p1':'p2'); } 
-            else spawnBall();
+            if(game.scoreP1>=10 || game.scoreP2>=10) { 
+                game.active = false; 
+                document.getElementById('win-screen').style.display='flex'; 
+                document.getElementById('winner-label').innerText = game.scoreP1>=10 ? "P1 VENCEU!" : "BOT VENCEU!";
+                addMoney(game.scoreP1>=10?50:10);
+            } else spawnBall();
         }
-        let ar = ITEMS.find(i=>i.id===game.eq.arena);
-        ctx.fillStyle = ar.color; ctx.fillRect(0,0,800,400);
-        ctx.fillStyle = '#d4a373'; ctx.fillRect(0,360,800,40);
-        ctx.fillStyle = 'white'; ctx.fillRect(398,280,4,80);
-        drawPlayer(p1, game.eq.skin); drawPlayer(p2, 'skin_ninja'); drawBall();
+
+        drawArena();
+        drawPlayer(p1, game.eq.skin); 
+        drawPlayer(p2, 'skin_default'); 
+
+        ctx.fillStyle = ITEMS.find(i=>i.id===game.eq.ball).color;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, 12, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "black"; ctx.lineWidth = 2; ctx.stroke();
+
         document.getElementById('p1-score').innerText = game.scoreP1;
         document.getElementById('p2-score').innerText = game.scoreP2;
     }
     requestAnimationFrame(loop);
 }
 
-const bH = (id, s) => { const e = document.getElementById(id); e.onpointerdown=(ev)=>{ev.preventDefault(); inputs[s]=true;}; e.onpointerup=(ev)=>{ev.preventDefault(); inputs[s]=false;}; };
+const bH = (id, s) => { 
+    const e = document.getElementById(id); 
+    e.onpointerdown=(ev)=>{ev.preventDefault(); inputs[s]=true;}; 
+    e.onpointerup=(ev)=>{ev.preventDefault(); inputs[s]=false;}; 
+};
 bH('m-left', 'left'); bH('m-right', 'right');
 document.getElementById('m-jump').onpointerdown=(ev)=>{ev.preventDefault(); inputs.jump=true;};
 document.getElementById('m-dive').onpointerdown=(ev)=>{ev.preventDefault(); inputs.dive=true;};
 
-setScreen('screen-lobby'); loop();
+updateUI();
+loop();
 </script>
 </body>
 </html>
